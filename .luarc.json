@@ -1,0 +1,9 @@
+{
+    "workspace": {
+        "ignoreDir": [
+            "vendor",
+            "build",
+            ".git"
+        ]
+    }
+}
