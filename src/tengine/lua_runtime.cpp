@@ -16,7 +16,9 @@ LuaRuntime::LuaRuntime() : L_(nullptr) {
 }
 
 LuaRuntime::~LuaRuntime() {
-    lua_close(L_);
+    if(L_) {
+        lua_close(L_);
+    }
 }
 
 void LuaRuntime::openLibs() const {

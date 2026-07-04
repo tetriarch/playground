@@ -27,7 +27,10 @@ int main(int argc, char** argv) {
     tengine::LuaRuntime lua;
     lua.openLibs();
     lua.bindFunction("myprint", l_print);
+    lua.runFile("assets/scripts/init.lua");
     lua.runFile("assets/scripts/hello.lua");
     lua.call("hello", "Tetriarch", "Nice to know you");
     lua.runString(R"( print("Direct Lua string execution"))");
+    std::string addition = lua.callRet<std::string>("add", "a", "b");
+    std::println("{}", addition);
 }
