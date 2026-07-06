@@ -7,13 +7,6 @@
 #include <tengine/lua_runtime.hpp>
 #include <tengine/utils/logger.hpp>
 
-// l_print exposure to be called from Lua
-int l_print(lua_State* L) {
-    std::string s = luaL_checkstring(L, 1);  // gets to string convertible value
-    std::println("{}", s);
-    return 0;  // we return 0 because we don't push result to stack
-}
-
 int main(int argc, char** argv) {
     tengine::setLogger(std::make_shared<tengine::Logger>());
     LOGGER->addSink(std::make_shared<tengine::ConsoleLogSink>());
@@ -26,11 +19,14 @@ int main(int argc, char** argv) {
 
     tengine::LuaRuntime lua;
     lua.openLibs();
-    lua.bindFunction("myprint", l_print);
+
+    lua.bind("myprint", [](std::string msg) { std::println("tengine:Lua:> {}", msg); });
+    lua.bind("strEqual", [](const std::string a, const std::string b) -> bool { return a == b; });
+
     lua.runFile("assets/scripts/init.lua");
     lua.runFile("assets/scripts/hello.lua");
     lua.call("hello", "Tetriarch", "Nice to know you");
-    lua.runString(R"( print("Direct Lua string execution"))");
+    lua.runString(R"( require("utils").log("Direct Lua string execution"))");
     std::string addition = lua.callRet<std::string>("add", "a", "b");
     std::println("{}", addition);
 }

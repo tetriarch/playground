@@ -7,7 +7,7 @@
 local M = {}
 
 function M.log(msg)
-    print("::Lua:: -> " .. msg)
+    print(":Lua:> " .. tostring(msg))
 end
 
 return M

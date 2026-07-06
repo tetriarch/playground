@@ -11,7 +11,7 @@ namespace tengine {
 LuaRuntime::LuaRuntime() : L_(nullptr) {
     L_ = luaL_newstate();
     if(!L_) {
-        LOG_FATAL("Lua", "failed to create Lua state");
+        LOG_FATAL("LuaRuntime", "failed to create Lua state");
     }
 }
 
@@ -28,19 +28,32 @@ void LuaRuntime::openLibs() const {
 
 void LuaRuntime::runFile(const std::string& scriptPath) const {
     if(luaL_dofile(L_, scriptPath.c_str()) != LUA_OK) {
-        LOG_FATAL("Lua", "{}", lua_tostring(L_, -1));
+        LOG_FATAL("LuaRuntime", "{}", lua_tostring(L_, -1));
     }
 }
 
 void LuaRuntime::runString(const std::string& scriptString) const {
     if(luaL_dostring(L_, scriptString.c_str()) != LUA_OK) {
-        LOG_FATAL("Lua", "{}", lua_tostring(L_, -1));
+        LOG_FATAL("LuaRuntime", "{}", lua_tostring(L_, -1));
     }
 }
 
-void LuaRuntime::bindFunction(const std::string& functionName, lua_CFunction function) const {
+void LuaRuntime::bindRaw(const std::string& functionName, lua_CFunction function) const {
     lua_pushcfunction(L_, function);
     lua_setglobal(L_, functionName.c_str());
 }
+
+namespace detail {
+
+s32 luaFnHook(lua_State* L) {
+    auto binding = static_cast<IFnBinding*>(lua_touserdata(L, lua_upvalueindex(1)));
+
+    if(!binding) {
+        LOG_FATAL("LuaRuntime", "binding is nullptr");
+    }
+    return binding->invoke(L);
+}
+
+}  // namespace detail
 
 }  // namespace tengine
