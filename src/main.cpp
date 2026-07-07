@@ -4,7 +4,8 @@
  * All rights reserved.
  */
 
-#include <tengine/lua_runtime.hpp>
+// #include <tengine/lua_runtime.hpp>
+#include <sol/sol.hpp>
 #include <tengine/utils/logger.hpp>
 
 int main(int argc, char** argv) {
@@ -17,16 +18,19 @@ int main(int argc, char** argv) {
 #endif
     LOGGER->setColoredOutput(true);
 
-    tengine::LuaRuntime lua;
-    lua.openLibs();
+    sol::state lua;
+    lua.open_libraries(sol::lib::base, sol::lib::package);
 
-    lua.bind("myprint", [](std::string msg) { std::println("tengine:Lua:> {}", msg); });
-    lua.bind("strEqual", [](const std::string a, const std::string b) -> bool { return a == b; });
+    lua.set_function("myprint", [](std::string msg) { std::println("tengine:Lua:> {}", msg); });
+    lua.set_function("strEqual", [](const std::string& a, const std::string& b) -> bool {
+        return a == b;
+    });
 
-    lua.runFile("assets/scripts/init.lua");
-    lua.runFile("assets/scripts/hello.lua");
-    lua.call("hello", "Tetriarch", "Nice to know you");
-    lua.runString(R"( require("utils").log("Direct Lua string execution"))");
-    std::string addition = lua.callRet<std::string>("add", "a", "b");
+    lua.do_file("assets/scripts/init.lua");
+    lua.do_file("assets/scripts/hello.lua");
+
+    lua["hello"]("Tetriarch", "Nice to know you");
+    lua.script(R"( require("utils").log("Direct Lua string execution"))");
+    std::string addition = lua["add"]("a", "b");
     std::println("{}", addition);
 }

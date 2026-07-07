@@ -3,9 +3,26 @@ cmake_minimum_required(VERSION 3.22.0)
 set(VERSION "0.0.1")
 set(PROJECT_NAME "playground")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-SET(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 23)
 
 project(${PROJECT_NAME} VERSION ${VERSION} LANGUAGES CXX)
+
+include(FetchContent)
+
+# FetchDependency to avoid re-compilation of deps on every build execution
+FetchContent_Declare(FetchDependency
+    GIT_REPOSITORY https://github.com/jpetrie/fetch-dependency.git
+    GIT_TAG origin/main
+)
+FetchContent_MakeAvailable(FetchDependency)
+include(${fetchdependency_SOURCE_DIR}/FetchDependency.cmake)
+
+fetch_dependency(Sol2
+    GIT_SOURCE https://github.com/ThePhD/sol2.git
+    VERSION v3.5.0
+    CONFIGURATION ${CMAKE_BUILD_TYPE}
+)
+# set(SOL2_LUA_VERSION "5.4.8")
 
 add_subdirectory(vendor)
 file(GLOB_RECURSE playground_files CONFIGURE_DEPENDS "src/**.cpp")
@@ -33,7 +50,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PROJECT_SOURCE_DIR}/src/tengine/pch.hpp>)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(${PROJECT_NAME} PRIVATE lua::lua)
+target_link_libraries(${PROJECT_NAME} PRIVATE lua::lua sol2::sol2)
 
 # link compile_commands.json
 add_custom_command(
