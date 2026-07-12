@@ -22,7 +22,6 @@ fetch_dependency(Sol2
     VERSION v3.5.0
     CONFIGURATION ${CMAKE_BUILD_TYPE}
 )
-# set(SOL2_LUA_VERSION "5.4.8")
 
 add_subdirectory(vendor)
 file(GLOB_RECURSE playground_files CONFIGURE_DEPENDS "src/**.cpp")

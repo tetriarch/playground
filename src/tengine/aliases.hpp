@@ -25,8 +25,7 @@ namespace tengine {
 
 class IAsset;
 class IAssetLoader;
-class Entity;
-class ComponentBase;
+class Node;
 
 // sets restriction for T - has to be final and has to inherit from IAsset
 template <typename T>
@@ -39,9 +38,8 @@ class ITypedAssetLoader;
 using IAssetPtr = std::shared_ptr<IAsset>;
 using IAssetLoaderPtr = std::unique_ptr<IAssetLoader>;
 
-using EntityPtr = std::shared_ptr<Entity>;
-using EntityHandle = std::weak_ptr<Entity>;
-using ComponentPtr = std::shared_ptr<ComponentBase>;
+using NodePtr = std::shared_ptr<Node>;
+using NodeHandle = std::weak_ptr<Node>;
 
 class AssetManager;
 using AssetManagerPtr = AssetManager*;

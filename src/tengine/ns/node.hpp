@@ -1,14 +1,32 @@
 #pragma once
 
+#include "tengine/aliases.hpp"
+
 namespace tengine {
 
-class Node {
+class Node : public std::enable_shared_from_this<Node> {
 public:
     Node();
-    ~Node();
+    Node(const std::string& name);
+    virtual ~Node() = default;
+
+public:
+    [[nodiscard]] auto name() const -> const std::string&;
+    void setName(const std::string& name);
+    [[nodiscard]] auto scriptPath() const -> const std::string&;
+    void setScriptPath(const std::string& scriptPath);
+
+public:
+    virtual void ready() {};
+    virtual void update(const f32 dt) {};
+    virtual void postUpdate(const f32 dt) {};
+    virtual void render() {};
 
 private:
     std::string name_;
+    std::string scriptPath_;
+    NodeHandle parent_;
+    std::unordered_map<std::string, NodePtr> children_;
 };
 
 }  // namespace tengine
