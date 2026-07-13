@@ -17,11 +17,21 @@ FetchContent_Declare(FetchDependency
 FetchContent_MakeAvailable(FetchDependency)
 include(${fetchdependency_SOURCE_DIR}/FetchDependency.cmake)
 
+# Sol2 
 fetch_dependency(Sol2
     GIT_SOURCE https://github.com/ThePhD/sol2.git
     VERSION v3.5.0
     CONFIGURATION ${CMAKE_BUILD_TYPE}
 )
+
+# GLM
+fetch_dependency(glm
+        GIT_SOURCE https://github.com/g-truc/glm.git
+        VERSION 1.0.1
+        CONFIGURATION ${CMAKE_BUILD_TYPE}
+        CONFIGURE_OPTIONS -DGLM_BUILD_TESTS=OFF -DBUILD_SHARED_LIBS=OFF
+)
+
 
 add_subdirectory(vendor)
 file(GLOB_RECURSE playground_files CONFIGURE_DEPENDS "src/**.cpp")
@@ -49,7 +59,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PROJECT_SOURCE_DIR}/src/tengine/pch.hpp>)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(${PROJECT_NAME} PRIVATE lua::lua sol2::sol2)
+target_link_libraries(${PROJECT_NAME} PRIVATE lua::lua sol2::sol2 glm::glm)
 
 # link compile_commands.json
 add_custom_command(

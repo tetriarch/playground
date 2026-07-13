@@ -24,4 +24,16 @@ void Node::setScriptPath(const std::string& scriptPath) {
     scriptPath_ = scriptPath;
 }
 
+void Node::ready() {
+    if(!scriptPath_.empty()) {
+        // TODO: Do we want AssetManager to pre-load the file or do we wanna open the file via sol,
+        // directly here..
+        // scriptHandle_ = ScriptSystem->get()->doFile(scriptPath);
+    }
+}
+
+auto Node::children() const -> const std::unordered_map<std::string, NodePtr>& {
+    return children_;
+}
+
 }  // namespace tengine

@@ -4,4 +4,6 @@
 --
 --]]
 
-package.path = package.path .. ";assets/scripts/?.lua"
+return {
+    print("Welcome to TEngine"),
+}

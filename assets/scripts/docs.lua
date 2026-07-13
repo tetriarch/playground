@@ -1,3 +1,9 @@
+--[[
+-- Copyright (c) 2026 Petr Jirmus
+-- All rights reserved.
+--
+--]]
+
 --- prints message
 ---@param message string
 function myprint(message) end

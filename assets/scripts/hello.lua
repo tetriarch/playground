@@ -1,8 +1,13 @@
+--[[
+-- Copyright (c) 2026 Petr Jirmus
+-- All rights reserved.
+--
+--]]
+
 local utils = require("utils")
 
 function hello(whom, what)
-    utils.log("Hello, " .. whom .. " from Lua")
-    utils.log(what)
+    utils.log("Hello, " .. whom .. " from Lua, " .. what)
 end
 
 function add(a, b)

@@ -6,6 +6,7 @@
 
 #include <sol/sol.hpp>
 #include <tengine/ns/node_tree.hpp>
+#include <tengine/script_system.hpp>
 #include <tengine/utils/logger.hpp>
 
 int main(int argc, char** argv) {
@@ -18,27 +19,34 @@ int main(int argc, char** argv) {
 #endif
     LOGGER->setColoredOutput(true);
 
-    sol::state lua;
-    lua.open_libraries(sol::lib::base, sol::lib::package);
-    lua.set_function("myprint", [](std::string msg) { std::println("tengine:Lua:> {}", msg); });
-    lua.set_function("strEqual", [](const std::string& a, const std::string& b) -> bool {
-        return a == b;
-    });
+    auto scriptSys = tengine::ScriptSystem::get();
 
-    lua.do_file("assets/scripts/init.lua");
+    // lua.set_function("myprint", [](std::string msg) { std::println("tengine:Lua:> {}", msg); });
+    // lua.set_function("strEqual", [](const std::string& a, const std::string& b) -> bool {
+    //     return a == b;
+    // });
 
-    // TODO: This might be worth to wrap
-    auto result = lua.do_file("assets/scripts/hello.lua");
-    if(result.status() != sol::call_status::ok) {
-        sol::error err = result;
-        std::println("{}", err.what());
-    }
+    // lua["hello"]("Tetriarch", "nice to know you");
+    // lua.script(R"( require("utils").log("Direct Lua string execution"))");
 
-    lua["hello"]("Tetriarch", "Nice to know you");
-    lua.script(R"( require("utils").log("Direct Lua string execution"))");
-    std::string addition = lua["add"]("a", "b");
-    std::println("{}", addition);
+    sol::table luaHandle = scriptSys->runFile("assets/scripts/init.lua");
+
+    // log has to exist and has to be a function
+    // std::string fnName = "log";
+    // auto log = luaHandle[fnName];
+    // TENGINE_ASSERT(log != sol::nil, "luaHandle has no object named {}", fnName);
+    // TENGINE_ASSERT(log.get_type() == sol::type::function, "{} is not a function", fnName);
+    //
+    // log("table test");
+    //
+    // std::string addition = lua["add"]("a", "b");
+    // std::println("{}", addition);
 
     // we start here
-    tengine::NodeTree nodeTree;
+    // tengine::NodeTree nodeTree;
+    // tengine::Node3D node;
+    // auto transform = node.transform();
+    // transform.position.x = 10.f;
+    // node.setTransform(transform);
+    // node.ready();
 }

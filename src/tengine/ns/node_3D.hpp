@@ -5,6 +5,7 @@
  */
 
 #include "tengine/ns/node.hpp"
+#include "tengine/transform.hpp"
 
 namespace tengine {
 
@@ -13,6 +14,7 @@ namespace tengine {
 class Node3D : public Node {
 public:
     Node3D();
+    Node3D(const std::string& name);
 
 public:
     void ready() override;
@@ -20,8 +22,12 @@ public:
     void postUpdate(const f32 dt) override;
     void render() override;
 
+public:
+    [[nodiscard]] auto transform() const -> const Transform&;
+    void setTransform(const Transform& transform);
+
 private:
-    // TODO: Transform
+    Transform transform_;
 };
 
 }  // namespace tengine
