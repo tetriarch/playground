@@ -49,7 +49,7 @@ private:
      * @brief internal delegate of init, runFile and runScript
      *
      * @param script
-     * @param filePath - filePath of the script, defaults to empty string if the script is not ran
+     * @param filePath - filePath of the script, leave empty, if you dont run script from a file
      * from a file
      * @return valid sol::protected_function_result on success or std::nullopt on failure
      */

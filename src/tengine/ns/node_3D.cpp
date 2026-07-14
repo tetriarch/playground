@@ -14,8 +14,10 @@ Node3D::Node3D() : Node("Node3D") {
 Node3D::Node3D(const std::string& name) : Node(name) {
 }
 
+void Node3D::attach() {
+}
+
 void Node3D::ready() {
-    Node::ready();
 }
 
 void Node3D::update(const f32 dt) {

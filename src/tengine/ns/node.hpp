@@ -18,6 +18,7 @@ public:
     void setScriptPath(const std::string& scriptPath);
 
 public:
+    virtual void attach() {};
     virtual void ready();
     virtual void update(const f32 dt) {};
     virtual void postUpdate(const f32 dt) {};
