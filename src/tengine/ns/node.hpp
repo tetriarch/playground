@@ -1,8 +1,7 @@
 #pragma once
 
-#include <sol/sol.hpp>
-
 #include "tengine/aliases.hpp"
+#include "tengine/script_system.hpp"
 
 namespace tengine {
 
@@ -30,7 +29,7 @@ public:
 private:
     std::string name_;
     std::string scriptPath_;
-    sol::table scriptHandle_;
+    ScriptInstance scriptInstance_;
     NodeHandle parent_;
     std::unordered_map<std::string, NodePtr> children_;
 };

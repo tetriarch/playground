@@ -4,7 +4,6 @@
  * All rights reserved.
  */
 
-#include <sol/sol.hpp>
 #include <tengine/asset_manager.hpp>
 #include <tengine/ns/node_tree.hpp>
 #include <tengine/script_system.hpp>
