@@ -5,6 +5,7 @@
  */
 
 #include <sol/sol.hpp>
+#include <tengine/asset_manager.hpp>
 #include <tengine/ns/node_tree.hpp>
 #include <tengine/script_system.hpp>
 #include <tengine/utils/logger.hpp>
@@ -19,6 +20,7 @@ int main(int argc, char** argv) {
 #endif
     LOGGER->setColoredOutput(true);
 
+    tengine::AssetManager::get()->setAssetRoot("assets");
     auto scriptSys = tengine::ScriptSystem::get();
 
     // lua.set_function("myprint", [](std::string msg) { std::println("tengine:Lua:> {}", msg); });
@@ -29,7 +31,8 @@ int main(int argc, char** argv) {
     // lua["hello"]("Tetriarch", "nice to know you");
     // lua.script(R"( require("utils").log("Direct Lua string execution"))");
 
-    sol::table luaHandle = scriptSys->runFile("assets/scripts/init.lua");
+    tengine::ScriptInstance luaHandle = scriptSys->runFile("scripts/init.lua");
+    scriptSys->runScript("print(\"Hello, World\")");
 
     // log has to exist and has to be a function
     // std::string fnName = "log";

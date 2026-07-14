@@ -11,6 +11,8 @@
 
 namespace tengine {
 
+using ScriptInstance = std::optional<sol::table>;
+
 class ScriptSystem {
     struct InternalOnly {};
 
@@ -23,10 +25,9 @@ public:
      * @brief runs a Lua script from file and returns it's content as Lua table.
      *
      * @param filePath
-     * @return populated Lua table on success. invalid table on failure, validity check is required
-     * before using
+     * @return valid ScriptInstance on success or std::nullopt on failure
      */
-    auto runFile(const std::string& filePath) -> sol::table;
+    auto runFile(const std::string& filePath) -> ScriptInstance;
 
     /**
      * @brief runs a Lua script directly
@@ -45,12 +46,16 @@ private:
     [[nodiscard]] bool init();
 
     /**
-     * @brief internal delegate of runScript
+     * @brief internal delegate of init, runFile and runScript
      *
      * @param script
-     * @return true on success, false on failure
+     * @param fromFile - just a bool flag if the script is from file
+     * @param filePath - filePath of the script
+     * @return valid sol::protected_function_result on success or std::nullopt on failure
      */
-    bool runScriptInternal(const std::string& script);
+    auto runScriptInternal(
+        const std::string& script, bool fromFile = false, const std::string& filePath = ""
+    ) -> std::optional<sol::protected_function_result>;
 
 private:
     sol::state state_;

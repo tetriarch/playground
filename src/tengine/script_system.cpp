@@ -6,6 +6,7 @@
 
 #include "tengine/script_system.hpp"
 
+#include "tengine/asset_manager.hpp"
 #include "tengine/utils/logger.hpp"
 
 namespace tengine {
@@ -36,36 +37,61 @@ bool ScriptSystem::init() {
     return initialized_;
 }
 
-auto ScriptSystem::runFile(const std::string& filePath) -> sol::table {
+auto ScriptSystem::runFile(const std::string& filePath) -> ScriptInstance {
     TENGINE_ASSERT(initialized_, "ScriptSystem is not initialized");
 
-    auto result = state_.safe_script_file(filePath);
-    if(result.status() != sol::call_status::ok) {
-        sol::error error = result;
-        LOG_ERROR("ScriptSystem", "{} | {}", error.what(), filePath);
-        return sol::table();
+    auto am = AssetManager::get();
+    auto scriptFileData = am->loadRaw(filePath);
+    if(!scriptFileData) {
+        // error already logged in AssetManager
+        return std::nullopt;
     }
 
-    if(result.get_type() != sol::type::table) {
-        LOG_ERROR("ScriptSystem", "{} | script does not return table", filePath);
-        return sol::table();
+    const auto& script = scriptFileData.value();
+    std::string scriptStr(reinterpret_cast<const char*>(script.data()), script.size());
+    auto result = runScriptInternal(scriptStr, true, am->getAssetPath(filePath).generic_string());
+    if(!result) {
+        // error already logged in runScriptInternal
+        return std::nullopt;
     }
-    return sol::table(result);
+
+    if(result.value().get_type() != sol::type::table) {
+        LOG_ERROR(
+            "ScriptSystem", "script does not return table | {}",
+            am->getAssetPath(filePath).generic_string()
+        );
+        return std::nullopt;
+    }
+    return sol::table(result.value());
 }
 
 bool ScriptSystem::runScript(const std::string& script) {
     TENGINE_ASSERT(initialized_, "ScriptSystem is not initialized");
-    return runScriptInternal(script);
-}
-
-bool ScriptSystem::runScriptInternal(const std::string& script) {
-    auto result = state_.safe_script(script);
-    if(result.status() != sol::call_status::ok) {
-        sol::error error = result;
-        LOG_ERROR("ScriptSystem", "{}", error.what());
+    if(!runScriptInternal(script)) {
         return false;
     }
     return true;
+}
+
+auto ScriptSystem::runScriptInternal(
+    const std::string& script, bool fromFile, const std::string& filePath
+) -> std::optional<sol::protected_function_result> {
+    auto result = state_.safe_script(script);
+    if(result.status() != sol::call_status::ok) {
+        sol::error error = result;
+
+        if(fromFile) {
+            TENGINE_ASSERT(
+                !filePath.empty(), "script is from file, but no filePath has been supplied"
+            );
+            LOG_ERROR("ScriptSystem", "{} | {}", error.what(), filePath);
+        } else {
+            LOG_ERROR("ScriptSystem", "{}", error.what());
+        }
+
+        return std::nullopt;
+    }
+    return result;
 }
 
 }  // namespace tengine
