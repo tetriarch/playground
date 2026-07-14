@@ -49,13 +49,12 @@ private:
      * @brief internal delegate of init, runFile and runScript
      *
      * @param script
-     * @param fromFile - just a bool flag if the script is from file
-     * @param filePath - filePath of the script
+     * @param filePath - filePath of the script, defaults to empty string if the script is not ran
+     * from a file
      * @return valid sol::protected_function_result on success or std::nullopt on failure
      */
-    auto runScriptInternal(
-        const std::string& script, bool fromFile = false, const std::string& filePath = ""
-    ) -> std::optional<sol::protected_function_result>;
+    auto runScriptInternal(const std::string& script, const std::string& filePath = "")
+        -> std::optional<sol::protected_function_result>;
 
 private:
     sol::state state_;

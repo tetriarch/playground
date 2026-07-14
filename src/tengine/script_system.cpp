@@ -49,7 +49,7 @@ auto ScriptSystem::runFile(const std::string& filePath) -> ScriptInstance {
 
     const auto& script = scriptFileData.value();
     std::string scriptStr(reinterpret_cast<const char*>(script.data()), script.size());
-    auto result = runScriptInternal(scriptStr, true, am->getAssetPath(filePath).generic_string());
+    auto result = runScriptInternal(scriptStr, am->getAssetPath(filePath).generic_string());
     if(!result) {
         // error already logged in runScriptInternal
         return std::nullopt;
@@ -73,17 +73,13 @@ bool ScriptSystem::runScript(const std::string& script) {
     return true;
 }
 
-auto ScriptSystem::runScriptInternal(
-    const std::string& script, bool fromFile, const std::string& filePath
-) -> std::optional<sol::protected_function_result> {
+auto ScriptSystem::runScriptInternal(const std::string& script, const std::string& filePath)
+    -> std::optional<sol::protected_function_result> {
     auto result = state_.safe_script(script);
     if(result.status() != sol::call_status::ok) {
         sol::error error = result;
 
-        if(fromFile) {
-            TENGINE_ASSERT(
-                !filePath.empty(), "script is from file, but no filePath has been supplied"
-            );
+        if(!filePath.empty()) {
             LOG_ERROR("ScriptSystem", "{} | {}", error.what(), filePath);
         } else {
             LOG_ERROR("ScriptSystem", "{}", error.what());

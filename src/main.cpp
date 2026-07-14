@@ -22,6 +22,8 @@ int main(int argc, char** argv) {
 
     tengine::AssetManager::get()->setAssetRoot("assets");
     auto scriptSys = tengine::ScriptSystem::get();
+    tengine::ScriptInstance luaHandle = scriptSys->runFile("scripts/init.lua");
+    scriptSys->runScript("print(\"Hello, World\")");
 
     // lua.set_function("myprint", [](std::string msg) { std::println("tengine:Lua:> {}", msg); });
     // lua.set_function("strEqual", [](const std::string& a, const std::string& b) -> bool {
@@ -30,9 +32,6 @@ int main(int argc, char** argv) {
 
     // lua["hello"]("Tetriarch", "nice to know you");
     // lua.script(R"( require("utils").log("Direct Lua string execution"))");
-
-    tengine::ScriptInstance luaHandle = scriptSys->runFile("scripts/init.lua");
-    scriptSys->runScript("print(\"Hello, World\")");
 
     // log has to exist and has to be a function
     // std::string fnName = "log";
