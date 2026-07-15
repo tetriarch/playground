@@ -21,8 +21,7 @@ int main(int argc, char** argv) {
 
     tengine::AssetManager::get()->setAssetRoot("assets");
     auto scriptSys = tengine::ScriptSystem::get();
-    tengine::ScriptInstance luaHandle = scriptSys->runFile("scripts/init.lua");
-    scriptSys->runScript("print(\"Hello, World\")");
+    scriptSys->runScript("print(\"Welcome to TEngine\")");
 
     // lua.set_function("myprint", [](std::string msg) { std::println("tengine:Lua:> {}", msg); });
     // lua.set_function("strEqual", [](const std::string& a, const std::string& b) -> bool {

@@ -7,7 +7,6 @@
 #include "tengine/utils/logger.hpp"
 
 #include <chrono>
-#include <iostream>
 
 namespace tengine {
 
@@ -132,8 +131,7 @@ FileLogSink::FileLogSink(const std::string& filePath) {
     file_.open(filePath, std::ios::out | std::ios::trunc);
 
     if(!file_.is_open()) {
-        std::string error = std::format("Failed to open log file {}\n", filePath);
-        std::cerr << error;
+        std::println("failed to open log file {}", filePath);
     }
 }
 

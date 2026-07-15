@@ -32,6 +32,14 @@ void Node::ready() {
     }
 }
 
+void Node::enterTree() {
+    onEnterTree();
+}
+
+void Node::exitTree() {
+    onExitTree();
+}
+
 auto Node::children() const -> const std::unordered_map<std::string, NodePtr>& {
     return children_;
 }

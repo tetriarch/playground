@@ -18,10 +18,22 @@ public:
     void setScriptPath(const std::string& scriptPath);
 
 public:
-    virtual void attach() {};
+    void addChild(const NodePtr& child) {};
+    void removeChild(const NodePtr& child) {};
+
+public:
+    // engine only
+    void enterTree();
+    void exitTree();
+    virtual void onEnterTree() {};
+    virtual void onExitTree() {};
+
+    // scriptable
     virtual void ready();
     virtual void update(const f32 dt) {};
     virtual void postUpdate(const f32 dt) {};
+
+    // engine only
     virtual void render() {};
 
 public:

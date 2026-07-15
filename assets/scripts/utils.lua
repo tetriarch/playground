@@ -4,10 +4,10 @@
 --
 --]]
 
-local M = {}
+local Utils = {}
 
-function M.log(msg)
+function Utils.log(msg)
     print(":Lua:> " .. tostring(msg))
 end
 
-return M
+return Utils

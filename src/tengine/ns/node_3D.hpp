@@ -17,7 +17,6 @@ public:
     Node3D(const std::string& name);
 
 public:
-    void attach() override;
     void ready() override;
     void update(const f32 dt) override;
     void postUpdate(const f32 dt) override;
