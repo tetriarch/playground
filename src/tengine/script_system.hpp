@@ -12,6 +12,7 @@
 namespace tengine {
 
 using ScriptInstance = std::optional<sol::table>;
+using ScriptFunction = std::optional<sol::safe_function>;
 
 class ScriptSystem {
     struct InternalOnly {};

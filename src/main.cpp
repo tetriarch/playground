@@ -5,12 +5,15 @@
  */
 
 #include <tengine/asset_manager.hpp>
+#include <tengine/ns/node_3D.hpp>
 #include <tengine/ns/node_tree.hpp>
 #include <tengine/script_system.hpp>
 #include <tengine/utils/logger.hpp>
 
+using namespace tengine;
+
 int main(int argc, char** argv) {
-    tengine::setLogger(std::make_shared<tengine::Logger>());
+    setLogger(std::make_shared<tengine::Logger>());
     LOGGER->addSink(std::make_shared<tengine::ConsoleLogSink>());
 #ifdef DEBUG
     LOGGER->setLogLevel(LogLevel::Trace);
@@ -19,10 +22,29 @@ int main(int argc, char** argv) {
 #endif
     LOGGER->setColoredOutput(true);
 
-    tengine::AssetManager::get()->setAssetRoot("assets");
+    AssetManager::get()->setAssetRoot("assets");
     auto scriptSys = tengine::ScriptSystem::get();
     scriptSys->runScript("print(\"Welcome to TEngine\")");
 
+    // ---------------------------------------------------------------------------------------- init
+
+    // this is a separate scene setup as if were loading a scene from file
+    auto world = std::make_shared<Node>("Scene1");
+    auto player = std::make_shared<Node3D>("Player");
+    auto sword = std::make_shared<Node3D>("Sword");
+    auto shield = std::make_shared<Node3D>("Shield");
+    world->addChild(player);
+    player->addChild(sword);
+    player->addChild(shield);
+    player->setScriptPath("scripts/player.lua");
+    player->load();
+
+    // ---------------------------------------------------------------------------------------- loop
+
+    // bool running = false;
+    // do {
+    // } while(running);
+    //
     // lua.set_function("myprint", [](std::string msg) { std::println("tengine:Lua:> {}", msg); });
     // lua.set_function("strEqual", [](const std::string& a, const std::string& b) -> bool {
     //     return a == b;
