@@ -11,11 +11,11 @@ function Player:ready(self)
 end
 
 function Player:update(self, dt)
-    print("update")
+    print("update" .. " " .. dt)
 end
 
 function Player:postUpdate(self, dt)
-    print("postUpdate")
+    print("postUpdate" .. " " .. dt)
 end
 
 return Player

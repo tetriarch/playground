@@ -1,6 +1,7 @@
 #include "tengine/ns/node.hpp"
 
 #include "tengine/asset_manager.hpp"
+#include "tengine/ns/node_tree.hpp"
 #include "tengine/utils/logger.hpp"
 
 namespace tengine {
@@ -28,9 +29,24 @@ void Node::setScriptPath(const std::string& scriptPath) {
 }
 
 void Node::addChild(const NodePtr& child) {
+    // TODO: children need to have unique names
+    TENGINE_ASSERT(child, "child is nullptr");
+    if(tree_) {
+        tree_->addChild(shared_from_this(), child);
+        return;
+    }
+
+    auto [it, _] = children_.emplace(child->name(), child);
+    it->second->setParent(shared_from_this());
 }
 
 void Node::removeChild(const NodePtr& child) {
+    TENGINE_ASSERT(child, "child is nullptr");
+    if(tree_) {
+        tree_->removeChild(shared_from_this(), child);
+        return;
+    }
+    children_.erase(child->name());
 }
 
 auto Node::children() const -> const std::unordered_map<std::string, NodePtr>& {
@@ -38,10 +54,20 @@ auto Node::children() const -> const std::unordered_map<std::string, NodePtr>& {
 }
 
 void Node::setParent(const NodePtr& parent) {
+    parent_ = parent;
 }
 
 auto Node::parent() const -> NodePtr {
     return parent_.lock();
+}
+
+void Node::setTree(NodeTree* tree) {
+    // TODO: full Node path would be better here probably
+    TENGINE_ASSERT(tree_ != tree, "node '{}' is already attached to a tree", name());
+    tree_ = tree;
+    for(auto&& c : children_) {
+        c.second->setTree(tree);
+    }
 }
 
 void Node::load() {
@@ -57,15 +83,9 @@ void Node::load() {
     loadInternal();
 }
 
-void Node::enterTree() {
-    enterTreeInternal();
-}
-
-void Node::exitTree() {
-    exitTreeInternal();
-}
-
 void Node::ready() {
+    readyInternal();
+
     if(readyFn_) {
         readyFn_.value();
     }

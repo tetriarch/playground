@@ -17,6 +17,15 @@ FetchContent_Declare(FetchDependency
 FetchContent_MakeAvailable(FetchDependency)
 include(${fetchdependency_SOURCE_DIR}/FetchDependency.cmake)
 
+# SDL3
+fetch_dependency(
+        SDL3
+        GIT_SOURCE https://github.com/libsdl-org/SDL.git
+        VERSION release-3.2.20
+        CONFIGURATION ${CMAKE_BUILD_TYPE}
+        GENERATE_OPTIONS -DSDL_SHARED=OFF -DSDL_STATIC=ON -DBUILD_SHARED_LIBS=OFF
+)
+
 # Sol2 
 fetch_dependency(Sol2
     GIT_SOURCE https://github.com/ThePhD/sol2.git

@@ -12,6 +12,8 @@
 
 using namespace tengine;
 
+const f32 DELTA_TIME = 0.01f;
+
 int main(int argc, char** argv) {
     setLogger(std::make_shared<tengine::Logger>());
     LOGGER->addSink(std::make_shared<tengine::ConsoleLogSink>());
@@ -27,23 +29,38 @@ int main(int argc, char** argv) {
     scriptSys->runScript("print(\"Welcome to TEngine\")");
 
     // ---------------------------------------------------------------------------------------- init
+    NodeTree tree;
 
     // this is a separate scene setup as if were loading a scene from file
-    auto world = std::make_shared<Node>("Scene1");
-    auto player = std::make_shared<Node3D>("Player");
-    auto sword = std::make_shared<Node3D>("Sword");
-    auto shield = std::make_shared<Node3D>("Shield");
-    world->addChild(player);
-    player->addChild(sword);
-    player->addChild(shield);
-    player->setScriptPath("scripts/player.lua");
-    player->load();
+    {
+        auto world = std::make_shared<Node>("Scene1");
+        auto player = std::make_shared<Node3D>("Player");
+        auto sword = std::make_shared<Node3D>("Sword");
+        auto shield = std::make_shared<Node3D>("Shield");
+        world->addChild(player);
+        player->addChild(sword);
+        player->addChild(shield);
+        player->setScriptPath("scripts/player.lua");
+        player->load();
+
+        tree.setSceneRoot(world);
+    }
+    tree.ready();
 
     // ---------------------------------------------------------------------------------------- loop
 
-    // bool running = false;
-    // do {
-    // } while(running);
+    bool running = false;
+    tree.ready();
+    do {
+        tree.applyModifications();
+        tree.beginModificationQueue();
+
+        tree.update(DELTA_TIME);
+        tree.postUpdate(DELTA_TIME);
+        tree.render();
+
+        tree.endModificationQueue();
+    } while(running);
     //
     // lua.set_function("myprint", [](std::string msg) { std::println("tengine:Lua:> {}", msg); });
     // lua.set_function("strEqual", [](const std::string& a, const std::string& b) -> bool {
