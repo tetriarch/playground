@@ -31,6 +31,7 @@ int main(int argc, char** argv) {
     // ---------------------------------------------------------------------------------------- init
     SceneTree tree;
 
+    NodeHandle playerHandle;
     // this is a separate scene setup as if were loading a scene from file
     {
         auto world = std::make_shared<Node>("Scene1");
@@ -43,7 +44,7 @@ int main(int argc, char** argv) {
 
         tree.setSceneRoot(world);
         tree.ready();
-        tree.addChild(player, std::make_shared<Node3D>("Shield"));
+        playerHandle = player;
     }
 
     // ---------------------------------------------------------------------------------------- loop
@@ -52,6 +53,8 @@ int main(int argc, char** argv) {
     do {
         tree.applyModifications();
         tree.beginModificationQueue();
+        // TODO: This is bugged, fix it
+        tree.addChild(playerHandle.lock(), std::make_shared<Node3D>("Shield"));
 
         tree.update(DELTA_TIME);
         tree.postUpdate(DELTA_TIME);
