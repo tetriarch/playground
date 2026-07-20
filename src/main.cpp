@@ -6,7 +6,7 @@
 
 #include <tengine/asset_manager.hpp>
 #include <tengine/ns/node_3D.hpp>
-#include <tengine/ns/node_tree.hpp>
+#include <tengine/ns/scene_tree.hpp>
 #include <tengine/script_system.hpp>
 #include <tengine/utils/logger.hpp>
 
@@ -29,28 +29,26 @@ int main(int argc, char** argv) {
     scriptSys->runScript("print(\"Welcome to TEngine\")");
 
     // ---------------------------------------------------------------------------------------- init
-    NodeTree tree;
+    SceneTree tree;
 
     // this is a separate scene setup as if were loading a scene from file
     {
         auto world = std::make_shared<Node>("Scene1");
         auto player = std::make_shared<Node3D>("Player");
         auto sword = std::make_shared<Node3D>("Sword");
-        auto shield = std::make_shared<Node3D>("Shield");
         world->addChild(player);
         player->addChild(sword);
-        player->addChild(shield);
         player->setScriptPath("scripts/player.lua");
         player->load();
 
         tree.setSceneRoot(world);
+        tree.ready();
+        tree.addChild(player, std::make_shared<Node3D>("Shield"));
     }
-    tree.ready();
 
     // ---------------------------------------------------------------------------------------- loop
 
     bool running = false;
-    tree.ready();
     do {
         tree.applyModifications();
         tree.beginModificationQueue();

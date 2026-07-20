@@ -8,12 +8,6 @@
 
 #pragma once
 
-// TODO:
-// [x] root_ should hold only one scene as is child
-// [ ] root_ cannot have parent
-// [ ] root_ should probably be some sort of specialized RootNode final : public Node
-// [x] deferred tree modifications
-
 namespace tengine {
 
 enum class UpdateState {
@@ -26,19 +20,21 @@ enum class UpdateType {
     Immediate
 };
 
-class NodeTree {
+class SceneTree {
 public:
-    NodeTree();
-    void setSceneRoot(const NodePtr& scene);
+    SceneTree();
 
-    // for deffered tree modifications
 public:
+    void setSceneRoot(const NodePtr& scene, UpdateType updateType = UpdateType::Deferred);
+
     void addChild(
         const NodePtr& parent, const NodePtr& child, UpdateType updateType = UpdateType::Deferred
     );
+
     void removeChild(
         const NodePtr& parent, const NodePtr& child, UpdateType updateType = UpdateType::Deferred
     );
+
     void beginModificationQueue();
     void endModificationQueue();
     void applyModifications();

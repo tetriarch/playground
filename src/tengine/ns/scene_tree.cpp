@@ -4,46 +4,59 @@
  *
  */
 
-#include "tengine/ns/node_tree.hpp"
+#include "tengine/ns/scene_tree.hpp"
 
 #include "tengine/ns/node.hpp"
 #include "tengine/utils/logger.hpp"
 
 namespace tengine {
 
-NodeTree::NodeTree() : root_(std::make_shared<Node>("~")), updateState_(UpdateState::Idle) {
-    root_->tree_ = this;
+SceneTree::SceneTree() : root_(nullptr), updateState_(UpdateState::Idle) {
 }
 
-void NodeTree::setSceneRoot(const NodePtr& scene) {
-    TENGINE_ASSERT(root_, "root_ is nullptr");
-    TENGINE_ASSERT(root_->children_.size() <= 1, "root contains more than one child");
-
-    auto& children = root_->children_;
-    if(children.empty()) {
-        root_->addChild(scene);
+void SceneTree::setSceneRoot(const NodePtr& scene, UpdateType updateType) {
+    if(updateState_ == UpdateState::Updating && updateType == UpdateType::Deferred) {
+        modifications_.emplace_back([scene, this]() {
+            setSceneRoot(scene, UpdateType::Immediate);
+        });
         return;
     }
 
-    auto& sceneRoot = children.begin()->second;
-    sceneRoot->addChild(scene);
+    // TODO: move this to immediate method
+    TENGINE_ASSERT(scene, "scene is nullptr");
+    TENGINE_ASSERT(!scene->tree_, "scene root already belongs to a tree");
+    TENGINE_ASSERT(!scene->parent(), "scene root already has a parent");
+
+    if(root_) {
+        root_->setTree(nullptr);
+    }
+
+    root_ = scene;
+    root_->setTree(this);
 }
 
-void NodeTree::addChild(const NodePtr& parent, const NodePtr& child, UpdateType updateType) {
+void SceneTree::addChild(const NodePtr& parent, const NodePtr& child, UpdateType updateType) {
     if(updateState_ == UpdateState::Updating && updateType == UpdateType::Deferred) {
         modifications_.emplace_back([parent, child, this]() {
             addChild(parent, child, UpdateType::Immediate);
         });
         return;
     }
+
+    // TODO: move this to immediate method
     TENGINE_ASSERT(!child->parent(), "child node {} already has a parent", child->name());
-    child->parent_ = parent;
-    child->tree_ = this;
+
+    auto [_, inserted] = parent->children_.emplace(child->name_, child);
+    TENGINE_ASSERT(
+        inserted, "parent {} already has a child named {}", parent->name(), child->name()
+    );
+
+    child->setParent(parent);
+    child->setTree(this);
     child->ready();
-    parent->children_.emplace(child->name_, child);
 }
 
-void NodeTree::removeChild(const NodePtr& parent, const NodePtr& child, UpdateType updateType) {
+void SceneTree::removeChild(const NodePtr& parent, const NodePtr& child, UpdateType updateType) {
     if(updateState_ == UpdateState::Updating && updateType == UpdateType::Deferred) {
         modifications_.emplace_back([parent, child, this]() {
             removeChild(parent, child, UpdateType::Immediate);
@@ -51,23 +64,25 @@ void NodeTree::removeChild(const NodePtr& parent, const NodePtr& child, UpdateTy
         return;
     }
 
+    // TODO: move this to immediate method
     TENGINE_ASSERT(child->parent(), "child node {} doesn't have a parent", child->name());
-    child->parent().reset();
-    child->tree_ = nullptr;
+
     parent->children_.erase(child->name_);
+    child->resetParent();
+    child->setTree(nullptr);
 }
 
-void NodeTree::beginModificationQueue() {
+void SceneTree::beginModificationQueue() {
     TENGINE_ASSERT(updateState_ == UpdateState::Idle, "Tree state == Updating");
     updateState_ = UpdateState::Updating;
 }
 
-void NodeTree::endModificationQueue() {
+void SceneTree::endModificationQueue() {
     TENGINE_ASSERT(updateState_ == UpdateState::Updating, "Tree state == Idle");
     updateState_ = UpdateState::Idle;
 }
 
-void NodeTree::applyModifications() {
+void SceneTree::applyModifications() {
     TENGINE_ASSERT(updateState_ == UpdateState::Idle, "Tree state == Updating");
     for(auto&& m : modifications_) {
         m();
@@ -75,22 +90,22 @@ void NodeTree::applyModifications() {
     modifications_.clear();
 }
 
-void NodeTree::ready() {
+void SceneTree::ready() {
     TENGINE_ASSERT(root_, "root_ is nullptr");
     root_->ready();
 }
 
-void NodeTree::update(f32 dt) {
+void SceneTree::update(f32 dt) {
     TENGINE_ASSERT(root_, "root_ is nullptr");
     root_->update(dt);
 }
 
-void NodeTree::postUpdate(f32 dt) {
+void SceneTree::postUpdate(f32 dt) {
     TENGINE_ASSERT(root_, "root_ is nullptr");
     root_->postUpdate(dt);
 }
 
-void NodeTree::render() {
+void SceneTree::render() {
     TENGINE_ASSERT(root_, "root_ is nullptr");
     root_->render();
 }

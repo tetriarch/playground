@@ -17,12 +17,6 @@ public:
     Node3D(const std::string& name);
 
 public:
-    void ready() override;
-    void update(const f32 dt) override;
-    void postUpdate(const f32 dt) override;
-    void render() override;
-
-public:
     [[nodiscard]] auto transform() const -> const Transform&;
     void setTransform(const Transform& transform);
 

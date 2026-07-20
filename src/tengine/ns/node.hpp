@@ -5,7 +5,7 @@
 
 namespace tengine {
 
-class NodeTree;
+class SceneTree;
 
 class Node : public std::enable_shared_from_this<Node> {
 public:
@@ -26,9 +26,10 @@ public:
     [[nodiscard]] auto children() const -> const std::unordered_map<std::string, NodePtr>&;
 
     void setParent(const NodePtr& parent);
+    void resetParent();
     [[nodiscard]] auto parent() const -> NodePtr;
 
-    void setTree(NodeTree* tree);
+    void setTree(SceneTree* tree);
 
 public:
     // engine only
@@ -36,17 +37,20 @@ public:
     void load();
 
     // scriptable
-    virtual void ready();
-    virtual void update(f32 dt);
-    virtual void postUpdate(f32 dt);
+    void ready();
+    void update(f32 dt);
+    void postUpdate(f32 dt);
 
     // engine only
-    virtual void render() {};
+    void render();
 
 protected:
     // these are implemented by derived classes
     virtual void loadInternal() {};
     virtual void readyInternal() {};
+    virtual void updateInternal(f32 dt) {};
+    virtual void postUpdateInternal(f32 dt) {};
+    virtual void renderInternal() {};
 
 private:
     std::string name_;
@@ -57,10 +61,10 @@ private:
     ScriptFunction postUpdateFn_;
 
 private:
-    friend class NodeTree;
+    friend class SceneTree;
     NodeHandle parent_;
     std::unordered_map<std::string, NodePtr> children_;
-    NodeTree* tree_;
+    SceneTree* tree_;
 };
 
 }  // namespace tengine
