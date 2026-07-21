@@ -87,10 +87,12 @@ void Node::load() {
 }
 
 void Node::ready() {
+    TENGINE_ASSERT(tree_, "node is not part of a tree");
     // ready children first
     for(auto&& c : children_) {
         c.second->ready();
     }
+    std::println("{}, ready", name_);
 
     // ready the descendant
     readyInternal();
@@ -99,10 +101,10 @@ void Node::ready() {
     if(readyFn_) {
         readyFn_.value();
     }
-    std::println("{}, ready", name_);
 }
 
 void Node::update(f32 dt) {
+    std::println("{}, update", name_);
     if(updateFn_) {
         // we call update with (self, dt) parameters
         updateFn_.value()(script_, dt);
@@ -113,10 +115,10 @@ void Node::update(f32 dt) {
     for(auto&& c : children_) {
         c.second->update(dt);
     }
-    std::println("{}, update", name_);
 }
 
 void Node::postUpdate(f32 dt) {
+    std::println("{}, postUpdate", name_);
     if(postUpdateFn_) {
         // we call postUpdate with (self, dt) parameters
         postUpdateFn_.value()(script_, dt);
@@ -127,17 +129,15 @@ void Node::postUpdate(f32 dt) {
     for(auto&& c : children_) {
         c.second->postUpdate(dt);
     }
-
-    std::println("{}, postUpdate", name_);
 }
 
 void Node::render() {
+    std::println("{}, render", name_);
     renderInternal();
 
     for(auto&& c : children_) {
         c.second->render();
     }
-    std::println("{}, render", name_);
 }
 
 }  // namespace tengine

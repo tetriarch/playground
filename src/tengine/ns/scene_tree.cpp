@@ -11,65 +11,33 @@
 
 namespace tengine {
 
-SceneTree::SceneTree() : root_(nullptr), updateState_(UpdateState::Idle) {
+SceneTree::SceneTree() : active_(false), root_(nullptr), updateState_(UpdateState::Idle) {
 }
 
-void SceneTree::setSceneRoot(const NodePtr& scene, UpdateType updateType) {
-    if(updateState_ == UpdateState::Updating && updateType == UpdateType::Deferred) {
-        modifications_.emplace_back([scene, this]() {
-            setSceneRoot(scene, UpdateType::Immediate);
-        });
+void SceneTree::setSceneRoot(const NodePtr& scene) {
+    if(updateState_ == UpdateState::Updating) {
+        modifications_.emplace_back([scene, this]() { setSceneRootImmediate(scene); });
         return;
     }
-
-    // TODO: move this to immediate method
-    TENGINE_ASSERT(scene, "scene is nullptr");
-    TENGINE_ASSERT(!scene->tree_, "scene root already belongs to a tree");
-    TENGINE_ASSERT(!scene->parent(), "scene root already has a parent");
-
-    if(root_) {
-        root_->setTree(nullptr);
-    }
-
-    root_ = scene;
-    root_->setTree(this);
+    setSceneRootImmediate(scene);
 }
 
-void SceneTree::addChild(const NodePtr& parent, const NodePtr& child, UpdateType updateType) {
-    if(updateState_ == UpdateState::Updating && updateType == UpdateType::Deferred) {
+void SceneTree::addChild(const NodePtr& parent, const NodePtr& child) {
+    if(updateState_ == UpdateState::Updating) {
+        modifications_.emplace_back([parent, child, this]() { addChildImmediate(parent, child); });
+        return;
+    }
+    addChildImmediate(parent, child);
+}
+
+void SceneTree::removeChild(const NodePtr& parent, const NodePtr& child) {
+    if(updateState_ == UpdateState::Updating) {
         modifications_.emplace_back([parent, child, this]() {
-            addChild(parent, child, UpdateType::Immediate);
+            removeChildImmediate(parent, child);
         });
         return;
     }
-
-    // TODO: move this to immediate method
-    TENGINE_ASSERT(!child->parent(), "child node {} already has a parent", child->name());
-
-    auto [_, inserted] = parent->children_.emplace(child->name_, child);
-    TENGINE_ASSERT(
-        inserted, "parent {} already has a child named {}", parent->name(), child->name()
-    );
-
-    child->setParent(parent);
-    child->setTree(this);
-    child->ready();
-}
-
-void SceneTree::removeChild(const NodePtr& parent, const NodePtr& child, UpdateType updateType) {
-    if(updateState_ == UpdateState::Updating && updateType == UpdateType::Deferred) {
-        modifications_.emplace_back([parent, child, this]() {
-            removeChild(parent, child, UpdateType::Immediate);
-        });
-        return;
-    }
-
-    // TODO: move this to immediate method
-    TENGINE_ASSERT(child->parent(), "child node {} doesn't have a parent", child->name());
-
-    parent->children_.erase(child->name_);
-    child->resetParent();
-    child->setTree(nullptr);
+    removeChildImmediate(parent, child);
 }
 
 void SceneTree::beginModificationQueue() {
@@ -91,23 +59,108 @@ void SceneTree::applyModifications() {
 }
 
 void SceneTree::ready() {
-    TENGINE_ASSERT(root_, "root_ is nullptr");
-    root_->ready();
+    if(updateState_ == UpdateState::Updating) {
+        modifications_.emplace_back([this]() { readyImmediate(); });
+        return;
+    }
+    readyImmediate();
 }
 
 void SceneTree::update(f32 dt) {
     TENGINE_ASSERT(root_, "root_ is nullptr");
+    TENGINE_ASSERT(active_, "tree is not ready");
     root_->update(dt);
 }
 
 void SceneTree::postUpdate(f32 dt) {
     TENGINE_ASSERT(root_, "root_ is nullptr");
+    TENGINE_ASSERT(active_, "tree is not ready");
     root_->postUpdate(dt);
 }
 
 void SceneTree::render() {
     TENGINE_ASSERT(root_, "root_ is nullptr");
+    TENGINE_ASSERT(active_, "tree is not ready");
     root_->render();
+}
+
+auto SceneTree::root() const -> const Node* {
+    return root_.get();
+}
+
+void SceneTree::readyImmediate() {
+    TENGINE_ASSERT(root_, "root_ is nullptr");
+    TENGINE_ASSERT(!active_, "tree is already ready");
+
+    active_ = true;
+    root_->ready();
+}
+
+void SceneTree::setSceneRootImmediate(const NodePtr& scene) {
+    TENGINE_ASSERT(scene, "scene is nullptr");
+    TENGINE_ASSERT(!scene->tree_, "scene root already belongs to a tree");
+    TENGINE_ASSERT(!scene->parent(), "scene root already has a parent");
+
+    // detach/destroy old scene
+    if(root_) {
+        root_->setTree(nullptr);
+    }
+
+    active_ = false;
+    root_ = scene;
+    root_->setTree(this);
+}
+
+void SceneTree::addChildImmediate(const NodePtr& parent, const NodePtr& child) {
+    TENGINE_ASSERT(parent, "parent is nullptr");
+    TENGINE_ASSERT(parent->tree_ == this, "parent is not from this tree");
+    TENGINE_ASSERT(child, "child is nullptr");
+    TENGINE_ASSERT(!child->tree_, "child already belongs to a tree");
+    TENGINE_ASSERT(!child->parent(), "child node {} already has a parent", child->name());
+
+    auto [_, inserted] = parent->children_.emplace(child->name_, child);
+    // TODO: we should check inserted and if it is false
+    // change the child's name with iterative number before trying to add it, instead of asserting
+    // here (example: if parent has Child named Something it should become Something002, or similar,
+    // it might be worth to enforce this with RegEx check
+    TENGINE_ASSERT(
+        inserted, "parent {} already has a child named {}", parent->name(), child->name()
+    );
+
+    child->setParent(parent);
+    child->setTree(this);
+
+    // ready the child when entering the tree if the tree is active otherwise we ready the child by
+    // calling ready of the entire tree
+    if(active_) {
+        child->ready();
+    }
+}
+
+void SceneTree::removeChildImmediate(const NodePtr& parent, const NodePtr& child) {
+    TENGINE_ASSERT(parent, "parent is nullptr");
+    TENGINE_ASSERT(child, "child is nullptr");
+    TENGINE_ASSERT(parent->tree_ == this, "parent is not from this tree");
+    TENGINE_ASSERT(child->tree_ == this, "child is not from this tree");
+
+    // confirm relationship both ways
+    auto actualParent = child->parent();
+    TENGINE_ASSERT(actualParent, "child {} does not have a parent", child->name());
+    TENGINE_ASSERT(
+        actualParent.get() == parent.get(), "node {} is not a child of {}", child->name(),
+        parent->name()
+    );
+
+    auto it = parent->children_.find(child->name());
+
+    TENGINE_ASSERT(
+        it != parent->children_.end() && it->second == child,
+        "parent-child hierarchy is inconsistent"
+    );
+
+    parent->children_.erase(it);
+    child->resetParent();
+    child->setTree(nullptr);
 }
 
 }  // namespace tengine

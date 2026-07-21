@@ -49,19 +49,21 @@ int main(int argc, char** argv) {
 
     // ---------------------------------------------------------------------------------------- loop
 
-    bool running = false;
-    do {
+    for(u32 x = 0; x < 2; x++) {
         tree.applyModifications();
         tree.beginModificationQueue();
-        // TODO: This is bugged, fix it
-        tree.addChild(playerHandle.lock(), std::make_shared<Node3D>("Shield"));
-
+        if(x == 0) {
+            if(auto player = playerHandle.lock()) {
+                tree.addChild(player, std::make_shared<Node3D>("Shield"));
+            }
+        }
         tree.update(DELTA_TIME);
         tree.postUpdate(DELTA_TIME);
-        tree.render();
-
         tree.endModificationQueue();
-    } while(running);
+
+        tree.render();
+        std::println("\n== End Frame ==\n");
+    }
     //
     // lua.set_function("myprint", [](std::string msg) { std::println("tengine:Lua:> {}", msg); });
     // lua.set_function("strEqual", [](const std::string& a, const std::string& b) -> bool {

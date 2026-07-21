@@ -15,25 +15,14 @@ enum class UpdateState {
     Updating
 };
 
-enum class UpdateType {
-    Deferred,
-    Immediate
-};
-
 class SceneTree {
 public:
     SceneTree();
 
 public:
-    void setSceneRoot(const NodePtr& scene, UpdateType updateType = UpdateType::Deferred);
-
-    void addChild(
-        const NodePtr& parent, const NodePtr& child, UpdateType updateType = UpdateType::Deferred
-    );
-
-    void removeChild(
-        const NodePtr& parent, const NodePtr& child, UpdateType updateType = UpdateType::Deferred
-    );
+    void setSceneRoot(const NodePtr& scene);
+    void addChild(const NodePtr& parent, const NodePtr& child);
+    void removeChild(const NodePtr& parent, const NodePtr& child);
 
     void beginModificationQueue();
     void endModificationQueue();
@@ -49,6 +38,13 @@ public:
     auto root() const -> const Node*;
 
 private:
+    void readyImmediate();
+    void setSceneRootImmediate(const NodePtr& scene);
+    void addChildImmediate(const NodePtr& parent, const NodePtr& child);
+    void removeChildImmediate(const NodePtr& parent, const NodePtr& child);
+
+private:
+    bool active_;
     NodePtr root_;
     UpdateState updateState_;
     std::vector<std::function<void()>> modifications_;
