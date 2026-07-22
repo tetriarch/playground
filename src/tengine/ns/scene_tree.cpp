@@ -11,11 +11,15 @@
 
 namespace tengine {
 
-SceneTree::SceneTree() : active_(false), root_(nullptr), updateState_(UpdateState::Idle) {
+SceneTree::SceneTree() : active_(false), root_(nullptr), state_(TreeState::Idle) {
 }
 
 void SceneTree::setSceneRoot(const NodePtr& scene) {
-    if(updateState_ == UpdateState::Updating) {
+    TENGINE_ASSERT(
+        state_ != TreeState::GettingReady,
+        "setting scene root while tree is getting ready is not allowed"
+    );
+    if(state_ == TreeState::Updating) {
         modifications_.emplace_back([scene, this]() { setSceneRootImmediate(scene); });
         return;
     }
@@ -23,7 +27,7 @@ void SceneTree::setSceneRoot(const NodePtr& scene) {
 }
 
 void SceneTree::addChild(const NodePtr& parent, const NodePtr& child) {
-    if(updateState_ == UpdateState::Updating) {
+    if(state_ == TreeState::Updating || state_ == TreeState::GettingReady) {
         modifications_.emplace_back([parent, child, this]() { addChildImmediate(parent, child); });
         return;
     }
@@ -31,7 +35,7 @@ void SceneTree::addChild(const NodePtr& parent, const NodePtr& child) {
 }
 
 void SceneTree::removeChild(const NodePtr& parent, const NodePtr& child) {
-    if(updateState_ == UpdateState::Updating) {
+    if(state_ == TreeState::Updating || state_ == TreeState::GettingReady) {
         modifications_.emplace_back([parent, child, this]() {
             removeChildImmediate(parent, child);
         });
@@ -41,29 +45,44 @@ void SceneTree::removeChild(const NodePtr& parent, const NodePtr& child) {
 }
 
 void SceneTree::beginModificationQueue() {
-    TENGINE_ASSERT(updateState_ == UpdateState::Idle, "Tree state == Updating");
-    updateState_ = UpdateState::Updating;
+    TENGINE_ASSERT(state_ == TreeState::Idle, "tree is not idle");
+    state_ = TreeState::Updating;
 }
 
 void SceneTree::endModificationQueue() {
-    TENGINE_ASSERT(updateState_ == UpdateState::Updating, "Tree state == Idle");
-    updateState_ = UpdateState::Idle;
+    TENGINE_ASSERT(state_ == TreeState::Updating, "tree is not updating");
+    state_ = TreeState::Idle;
 }
 
 void SceneTree::applyModifications() {
-    TENGINE_ASSERT(updateState_ == UpdateState::Idle, "Tree state == Updating");
-    for(auto&& m : modifications_) {
-        m();
+    TENGINE_ASSERT(state_ == TreeState::Idle, "tree is not idle");
+
+    // we need to iterate modifications in waves. In case there is need for deferred handling when
+    // iterating modifications
+
+    while(!modifications_.empty()) {
+        auto currentMods = std::move(modifications_);
+        modifications_.clear();
+
+        for(auto&& cm : currentMods) {
+            cm();
+        }
     }
-    modifications_.clear();
 }
 
 void SceneTree::ready() {
-    if(updateState_ == UpdateState::Updating) {
+    TENGINE_ASSERT(
+        state_ != TreeState::GettingReady, "ready cannot be called while the tree is getting ready"
+    );
+
+    if(state_ == TreeState::Updating) {
         modifications_.emplace_back([this]() { readyImmediate(); });
         return;
     }
     readyImmediate();
+    // we apply modifications in case that any node affected by ready call created new modification
+    // to the tree
+    applyModifications();
 }
 
 void SceneTree::update(f32 dt) {
@@ -93,10 +112,13 @@ void SceneTree::readyImmediate() {
     TENGINE_ASSERT(!active_, "tree is already ready");
 
     active_ = true;
+    state_ = TreeState::GettingReady;
     root_->ready();
+    state_ = TreeState::Idle;
 }
 
 void SceneTree::setSceneRootImmediate(const NodePtr& scene) {
+    TENGINE_ASSERT(state_ == TreeState::Idle, "tree is not idle");
     TENGINE_ASSERT(scene, "scene is nullptr");
     TENGINE_ASSERT(!scene->tree_, "scene root already belongs to a tree");
     TENGINE_ASSERT(!scene->parent(), "scene root already has a parent");
@@ -112,11 +134,17 @@ void SceneTree::setSceneRootImmediate(const NodePtr& scene) {
 }
 
 void SceneTree::addChildImmediate(const NodePtr& parent, const NodePtr& child) {
+    TENGINE_ASSERT(state_ == TreeState::Idle, "tree is not idle");
     TENGINE_ASSERT(parent, "parent is nullptr");
     TENGINE_ASSERT(parent->tree_ == this, "parent is not from this tree");
     TENGINE_ASSERT(child, "child is nullptr");
-    TENGINE_ASSERT(!child->tree_, "child already belongs to a tree");
-    TENGINE_ASSERT(!child->parent(), "child node {} already has a parent", child->name());
+    TENGINE_ASSERT(!child->tree_, "child {} already belongs to a tree", child->name());
+    TENGINE_ASSERT(!child->parent(), "child {} already has a parent", child->name());
+    TENGINE_ASSERT(child.get() != parent.get(), "node {} cannot be it's own child", child->name());
+    TENGINE_ASSERT(
+        !child->isAncestorOf(parent), "adding {} under {} would create hierarchy cycle",
+        child->name(), parent->name()
+    );
 
     auto [_, inserted] = parent->children_.emplace(child->name_, child);
     // TODO: we should check inserted and if it is false
@@ -133,11 +161,12 @@ void SceneTree::addChildImmediate(const NodePtr& parent, const NodePtr& child) {
     // ready the child when entering the tree if the tree is active otherwise we ready the child by
     // calling ready of the entire tree
     if(active_) {
-        child->ready();
+        readyNodeImmediate(child);
     }
 }
 
 void SceneTree::removeChildImmediate(const NodePtr& parent, const NodePtr& child) {
+    TENGINE_ASSERT(state_ == TreeState::Idle, "tree is not idle");
     TENGINE_ASSERT(parent, "parent is nullptr");
     TENGINE_ASSERT(child, "child is nullptr");
     TENGINE_ASSERT(parent->tree_ == this, "parent is not from this tree");
@@ -161,6 +190,16 @@ void SceneTree::removeChildImmediate(const NodePtr& parent, const NodePtr& child
     parent->children_.erase(it);
     child->resetParent();
     child->setTree(nullptr);
+}
+
+void SceneTree::readyNodeImmediate(const NodePtr& node) {
+    TENGINE_ASSERT(state_ == TreeState::Idle, "tree is not idle");
+    TENGINE_ASSERT(node, "node is nullptr");
+    TENGINE_ASSERT(node->tree_ == this, "child is not from this tree");
+
+    state_ = TreeState::GettingReady;
+    node->ready();
+    state_ = TreeState::Idle;
 }
 
 }  // namespace tengine

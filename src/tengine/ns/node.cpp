@@ -30,24 +30,53 @@ void Node::setScriptPath(const std::string& scriptPath) {
 
 void Node::addChild(const NodePtr& child) {
     TENGINE_ASSERT(child, "child is nullptr");
-    // TODO: children need to have unique names
+    TENGINE_ASSERT(child.get() != this, "node {} cannot be it's own child", name_);
+    TENGINE_ASSERT(
+        !child->isAncestorOf(shared_from_this()), "adding {} under {} would create hierarchy cycle",
+        child->name(), name_
+    );
+    TENGINE_ASSERT(!child->parent(), "child node {} already has a parent", child->name());
+    TENGINE_ASSERT(!child->tree_, "child {} already belongs to a tree", child->name());
+
     if(tree_) {
         tree_->addChild(shared_from_this(), child);
         return;
     }
 
-    children_.emplace(child->name(), child);
+    auto [_, inserted] = children_.emplace(child->name(), child);
+
+    TENGINE_ASSERT(inserted, "node {} already has a child named {}", name_, child->name());
+    // TODO: we should check inserted and if it is false
+    // change the child's name with iterative number before trying to add it, instead of asserting
+    // here (example: if parent has Child named Something it should become Something002, or similar,
+    // it might be worth to enforce this with RegEx check
+
     child->setParent(shared_from_this());
 }
 
 void Node::removeChild(const NodePtr& child) {
     TENGINE_ASSERT(child, "child is nullptr");
+
     if(tree_) {
         tree_->removeChild(shared_from_this(), child);
         return;
     }
-    child->setParent(nullptr);
-    children_.erase(child->name());
+
+    auto actualParent = child->parent();
+
+    TENGINE_ASSERT(
+        actualParent && actualParent.get() == this, "node {} is not a child of {}", child->name(),
+        name_
+    );
+
+    auto it = children_.find(child->name());
+
+    TENGINE_ASSERT(
+        it != children_.end() && it->second == child, "parent-child hierarchy is inconsistent"
+    );
+
+    child->resetParent();
+    children_.erase(it);
 }
 
 auto Node::children() const -> const std::unordered_map<std::string, NodePtr>& {
@@ -66,10 +95,22 @@ auto Node::parent() const -> NodePtr {
     return parent_.lock();
 }
 
+bool Node::isAncestorOf(const NodePtr& node) const {
+    auto current = node->parent();
+    while(current) {
+        if(current.get() == this) {
+            return true;
+        }
+        current = current->parent();
+    }
+    return false;
+}
+
 void Node::setTree(SceneTree* tree) {
     tree_ = tree;
-    for(auto&& c : children_) {
-        c.second->setTree(tree);
+
+    for(auto&& [_, c] : children_) {
+        c->setTree(tree);
     }
 }
 
@@ -88,22 +129,24 @@ void Node::load() {
 
 void Node::ready() {
     TENGINE_ASSERT(tree_, "node is not part of a tree");
+
     // ready children first
-    for(auto&& c : children_) {
-        c.second->ready();
+    for(auto&& [_, c] : children_) {
+        c->ready();
     }
     std::println("{}, ready", name_);
 
-    // ready the descendant
+    // ready derived of this class
     readyInternal();
 
     // finaly call ready from script
     if(readyFn_) {
-        readyFn_.value();
+        readyFn_.value()(script_);
     }
 }
 
 void Node::update(f32 dt) {
+    TENGINE_ASSERT(tree_, "node is not part of a tree");
     std::println("{}, update", name_);
     if(updateFn_) {
         // we call update with (self, dt) parameters
@@ -112,12 +155,13 @@ void Node::update(f32 dt) {
 
     updateInternal(dt);
 
-    for(auto&& c : children_) {
-        c.second->update(dt);
+    for(auto&& [_, c] : children_) {
+        c->update(dt);
     }
 }
 
 void Node::postUpdate(f32 dt) {
+    TENGINE_ASSERT(tree_, "node is not part of a tree");
     std::println("{}, postUpdate", name_);
     if(postUpdateFn_) {
         // we call postUpdate with (self, dt) parameters
@@ -126,17 +170,18 @@ void Node::postUpdate(f32 dt) {
 
     postUpdateInternal(dt);
 
-    for(auto&& c : children_) {
-        c.second->postUpdate(dt);
+    for(auto&& [_, c] : children_) {
+        c->postUpdate(dt);
     }
 }
 
 void Node::render() {
+    TENGINE_ASSERT(tree_, "node is not part of a tree");
     std::println("{}, render", name_);
     renderInternal();
 
-    for(auto&& c : children_) {
-        c.second->render();
+    for(auto&& [_, c] : children_) {
+        c->render();
     }
 }
 

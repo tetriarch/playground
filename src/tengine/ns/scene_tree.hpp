@@ -10,8 +10,9 @@
 
 namespace tengine {
 
-enum class UpdateState {
+enum class TreeState {
     Idle,
+    GettingReady,
     Updating
 };
 
@@ -42,11 +43,12 @@ private:
     void setSceneRootImmediate(const NodePtr& scene);
     void addChildImmediate(const NodePtr& parent, const NodePtr& child);
     void removeChildImmediate(const NodePtr& parent, const NodePtr& child);
+    void readyNodeImmediate(const NodePtr& node);
 
 private:
     bool active_;
     NodePtr root_;
-    UpdateState updateState_;
+    TreeState state_;
     std::vector<std::function<void()>> modifications_;
 };
 

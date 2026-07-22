@@ -29,6 +29,8 @@ public:
     void resetParent();
     [[nodiscard]] auto parent() const -> NodePtr;
 
+    [[nodiscard]] bool isAncestorOf(const NodePtr& node) const;
+
     void setTree(SceneTree* tree);
 
 public:
