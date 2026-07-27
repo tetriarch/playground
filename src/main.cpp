@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
 
     AssetManager::get()->setAssetRoot("assets");
     auto scriptSys = tengine::ScriptSystem::get();
-    scriptSys->runScript("print(\"Welcome to TEngine\")");
+    scriptSys->runScript("print(\"Welcome to TEngine\\n\")");
 
     // ---------------------------------------------------------------------------------------- init
     SceneTree tree;
@@ -50,6 +50,7 @@ int main(int argc, char** argv) {
     // ---------------------------------------------------------------------------------------- loop
 
     for(u32 x = 0; x < 2; x++) {
+        std::println("== Begin Frame ==");
         tree.applyModifications();
         tree.beginModificationQueue();
         if(x == 0) {
@@ -58,11 +59,10 @@ int main(int argc, char** argv) {
             }
         }
         tree.update(DELTA_TIME);
-        tree.postUpdate(DELTA_TIME);
         tree.endModificationQueue();
 
         tree.render();
-        std::println("\n== End Frame ==\n");
+        std::println("== End Frame ==");
     }
     //
     // lua.set_function("myprint", [](std::string msg) { std::println("tengine:Lua:> {}", msg); });

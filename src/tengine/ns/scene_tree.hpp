@@ -32,7 +32,6 @@ public:
 public:
     void ready();
     void update(f32 dt);
-    void postUpdate(f32 dt);
     void render();
 
 public:

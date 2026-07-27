@@ -124,6 +124,16 @@ void Node::load() {
         }
     }
 
+    auto ready = ScriptSystem::get()->function("ready", script_);
+    if(ready) {
+        readyFn_ = ready;
+    }
+
+    auto update = ScriptSystem::get()->function("update", script_);
+    if(update) {
+        updateFn_ = update;
+    }
+
     loadInternal();
 }
 
@@ -134,23 +144,34 @@ void Node::ready() {
     for(auto&& [_, c] : children_) {
         c->ready();
     }
-    std::println("{}, ready", name_);
-
     // ready derived of this class
     readyInternal();
 
     // finaly call ready from script
     if(readyFn_) {
-        readyFn_.value()(script_);
+        // TODO: Fix this with issue #4
+        auto result = readyFn_.value()(script_);
+        if(!result.valid()) {
+            sol::error err = result;
+            LOG_ERROR(
+                "Node", "Lua error in node, '{}', while calling ready():\n {}", name_, err.what()
+            );
+        }
     }
 }
 
 void Node::update(f32 dt) {
     TENGINE_ASSERT(tree_, "node is not part of a tree");
-    std::println("{}, update", name_);
     if(updateFn_) {
         // we call update with (self, dt) parameters
-        updateFn_.value()(script_, dt);
+        // TODO: Fix this with issue #4
+        auto result = updateFn_.value()(script_, dt);
+        if(!result.valid()) {
+            sol::error err = result;
+            LOG_ERROR(
+                "Node", "Lua error in node, '{}', while calling update(dt):\n {}", name_, err.what()
+            );
+        }
     }
 
     updateInternal(dt);
@@ -160,24 +181,8 @@ void Node::update(f32 dt) {
     }
 }
 
-void Node::postUpdate(f32 dt) {
-    TENGINE_ASSERT(tree_, "node is not part of a tree");
-    std::println("{}, postUpdate", name_);
-    if(postUpdateFn_) {
-        // we call postUpdate with (self, dt) parameters
-        postUpdateFn_.value()(script_, dt);
-    }
-
-    postUpdateInternal(dt);
-
-    for(auto&& [_, c] : children_) {
-        c->postUpdate(dt);
-    }
-}
-
 void Node::render() {
     TENGINE_ASSERT(tree_, "node is not part of a tree");
-    std::println("{}, render", name_);
     renderInternal();
 
     for(auto&& [_, c] : children_) {

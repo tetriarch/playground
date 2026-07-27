@@ -41,7 +41,6 @@ public:
     // scriptable
     void ready();
     void update(f32 dt);
-    void postUpdate(f32 dt);
 
     // engine only
     void render();
@@ -51,7 +50,6 @@ protected:
     virtual void loadInternal() {};
     virtual void readyInternal() {};
     virtual void updateInternal(f32 dt) {};
-    virtual void postUpdateInternal(f32 dt) {};
     virtual void renderInternal() {};
 
 private:

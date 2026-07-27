@@ -62,7 +62,9 @@ auto ScriptSystem::runFile(const std::string& filePath) -> ScriptInstance {
         );
         return std::nullopt;
     }
-    return sol::table(result.value());
+
+    ScriptTable table{filePath, sol::table(result.value())};
+    return table;
 }
 
 bool ScriptSystem::runScript(const std::string& script) {
@@ -71,6 +73,31 @@ bool ScriptSystem::runScript(const std::string& script) {
         return false;
     }
     return true;
+}
+
+auto ScriptSystem::function(const std::string& name, const ScriptInstance& instance) const
+    -> ScriptFunction {
+    TENGINE_ASSERT(initialized_, "ScriptSystem is not initialized");
+    TENGINE_ASSERT(instance, "instance is null");
+
+    // TODO: Simplify this!
+    // You don't need to iterate through keys, you can use the [] operator for direct lookup
+    auto instVal = instance.value();
+    for(auto&& pair : instVal.table.pairs()) {
+        sol::object key = pair.first;
+        auto keyStr = key.as<std::string>();
+
+        if(keyStr == name) {
+            if(!pair.second.is<sol::safe_function>()) {
+                LOG_ERROR(
+                    "ScriptSystem", "script {} has {} but it is not a function", instVal.path, name
+                );
+                return std::nullopt;
+            }
+            return pair.second;
+        }
+    }
+    return std::nullopt;
 }
 
 auto ScriptSystem::runScriptInternal(const std::string& script, const std::string& filePath)

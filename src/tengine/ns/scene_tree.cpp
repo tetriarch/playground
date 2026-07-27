@@ -91,12 +91,6 @@ void SceneTree::update(f32 dt) {
     root_->update(dt);
 }
 
-void SceneTree::postUpdate(f32 dt) {
-    TENGINE_ASSERT(root_, "root_ is nullptr");
-    TENGINE_ASSERT(active_, "tree is not ready");
-    root_->postUpdate(dt);
-}
-
 void SceneTree::render() {
     TENGINE_ASSERT(root_, "root_ is nullptr");
     TENGINE_ASSERT(active_, "tree is not ready");

@@ -11,7 +11,12 @@
 
 namespace tengine {
 
-using ScriptInstance = std::optional<sol::table>;
+struct ScriptTable {
+    std::string path;
+    sol::table table;
+};
+
+using ScriptInstance = std::optional<ScriptTable>;
 using ScriptFunction = std::optional<sol::safe_function>;
 
 class ScriptSystem {
@@ -37,6 +42,15 @@ public:
      * @return true on success, false on failure
      */
     bool runScript(const std::string& script);
+
+    /**
+     * @brief looks for function inside ScriptInstance
+     *
+     * @param name name of the function to look for
+     * @param instance instance of the script
+     * @return valid ScriptFunction on success or std::nullopt on failure
+     */
+    auto function(const std::string& name, const ScriptInstance& instance) const -> ScriptFunction;
 
 private:
     /**
