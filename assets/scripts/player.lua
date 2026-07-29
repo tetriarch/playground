@@ -12,12 +12,8 @@ function Player:ready()
     utils.log("Player ready")
 end
 
--- TODO: leave it like this until you solve issue #4
--- then remove the self param
-function Player:update(self, dt)
-    assert(type(dt) == "number", "dt has to be number")
-
-    -- utils.log("Player update" .. " " .. dt)
+function Player:update(dt)
+    utils.log("Player update" .. " " .. dt)
 end
 
 return Player

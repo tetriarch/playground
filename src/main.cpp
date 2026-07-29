@@ -26,7 +26,10 @@ int main(int argc, char** argv) {
 
     AssetManager::get()->setAssetRoot("assets");
     auto scriptSys = tengine::ScriptSystem::get();
-    scriptSys->runScript("print(\"Welcome to TEngine\\n\")");
+    auto result = scriptSys->runScript("print(\"Welcome to TEngine\\n\")");
+    if(!result) {
+        LOG_ERROR("main", "failed to execute script");
+    }
 
     // ---------------------------------------------------------------------------------------- init
     SceneTree tree;

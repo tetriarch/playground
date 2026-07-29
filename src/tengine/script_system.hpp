@@ -18,6 +18,16 @@ struct ScriptTable {
 
 using ScriptInstance = std::optional<ScriptTable>;
 using ScriptFunction = std::optional<sol::safe_function>;
+using ScriptResult = sol::protected_function_result;
+
+struct ValidationResult {
+    bool success = false;
+    std::string error;
+
+    explicit operator bool() const noexcept {
+        return success;
+    }
+};
 
 class ScriptSystem {
     struct InternalOnly {};
@@ -28,27 +38,37 @@ public:
 
 public:
     /**
-     * @brief runs a Lua script from file and returns it's content as Lua table.
+     * @brief executes a Lua script from file and returns the table it produces
      *
-     * @param filePath
-     * @return valid ScriptInstance on success or std::nullopt on failure
+     * @param filePath path to the script asset
+     * @return valid ScriptInstance on success, std::nullopt on failure
      */
-    auto runFile(const std::string& filePath) -> ScriptInstance;
+    [[nodiscard]] auto runFile(const std::string& filePath) -> ScriptInstance;
 
     /**
-     * @brief runs a Lua script directly
+     * @brief executes a Lua script
      *
-     * @param script
+     * @param script Lua source code
      * @return true on success, false on failure
      */
     bool runScript(const std::string& script);
 
     /**
-     * @brief looks for function inside ScriptInstance
+     * @brief validates execution result of Lua execution.
      *
-     * @param name name of the function to look for
-     * @param instance instance of the script
-     * @return valid ScriptFunction on success or std::nullopt on failure
+     * @param executionResult result returned by Lua script or callback.
+     * @return ValidationResult describing whether execution succeeded and error message on failure,
+     */
+    [[nodiscard]] auto validateExecution(const ScriptResult& executionResult) const
+        -> ValidationResult;
+
+    /**
+     * @brief looks up function in a ScriptInstance
+     *
+     * @param name name of the function
+     * @param instance script instance to search
+     * @return valid ScriptFunction on success, std::nullopt on failure if the function does not
+     * exist or is not callable
      */
     auto function(const std::string& name, const ScriptInstance& instance) const -> ScriptFunction;
 
@@ -61,15 +81,10 @@ private:
     [[nodiscard]] bool init();
 
     /**
-     * @brief internal delegate of init, runFile and runScript
-     *
-     * @param script
-     * @param filePath - filePath of the script, leave empty, if you dont run script from a file
-     * from a file
-     * @return valid sol::protected_function_result on success or std::nullopt on failure
+     * @brief internal validation helper used during initialization and by validateExecution
      */
-    auto runScriptInternal(const std::string& script, const std::string& filePath = "")
-        -> std::optional<sol::protected_function_result>;
+    [[nodiscard]] auto validateExecutionInternal(const ScriptResult& executionResult) const
+        -> ValidationResult;
 
 private:
     sol::state state_;

@@ -149,12 +149,18 @@ void Node::ready() {
 
     // finaly call ready from script
     if(readyFn_) {
-        // TODO: Fix this with issue #4
         auto result = readyFn_.value()(script_);
-        if(!result.valid()) {
-            sol::error err = result;
-            LOG_ERROR(
-                "Node", "Lua error in node, '{}', while calling ready():\n {}", name_, err.what()
+        auto validation = ScriptSystem::get()->validateExecution(result);
+        if(!validation) {
+            LOG_FATAL(
+                "Node",
+                "Lua runtime error\n"
+                " Node: {}\n"
+                " Callback: ready()\n"
+                " Error: {}\n"
+                " Source: {}\n",
+                name_, validation.error,
+                AssetManager::get()->getAssetPath(scriptPath_).generic_string()
             );
         }
     }
@@ -164,12 +170,18 @@ void Node::update(f32 dt) {
     TENGINE_ASSERT(tree_, "node is not part of a tree");
     if(updateFn_) {
         // we call update with (self, dt) parameters
-        // TODO: Fix this with issue #4
         auto result = updateFn_.value()(script_, dt);
-        if(!result.valid()) {
-            sol::error err = result;
-            LOG_ERROR(
-                "Node", "Lua error in node, '{}', while calling update(dt):\n {}", name_, err.what()
+        auto validation = ScriptSystem::get()->validateExecution(result);
+        if(!validation) {
+            LOG_FATAL(
+                "Node",
+                "Lua runtime error\n"
+                " Node: '{}'\n"
+                " Callback: update(dt)\n"
+                " Error: {}\n"
+                " Source: {}\n",
+                name_, validation.error,
+                AssetManager::get()->getAssetPath(scriptPath_).generic_string()
             );
         }
     }

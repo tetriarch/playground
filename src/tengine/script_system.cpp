@@ -31,9 +31,14 @@ bool ScriptSystem::init() {
 
     // enable print, assert, require
     state_.open_libraries(sol::lib::base, sol::lib::package);
-    if(runScriptInternal("package.path = package.path .. \";assets/scripts/?.lua\"")) {
-        initialized_ = true;
+    auto result = state_.safe_script("package.path = package.path .. \";assets/scripts/?.lua\"");
+    auto validation = validateExecutionInternal(result);
+    if(!validation) {
+        LOG_ERROR("ScriptSystem", "{}", validation.error);
+        initialized_ = false;
+        return initialized_;
     }
+    initialized_ = true;
     return initialized_;
 }
 
@@ -49,13 +54,17 @@ auto ScriptSystem::runFile(const std::string& filePath) -> ScriptInstance {
 
     const auto& script = scriptFileData.value();
     std::string scriptStr(reinterpret_cast<const char*>(script.data()), script.size());
-    auto result = runScriptInternal(scriptStr, am->getAssetPath(filePath).generic_string());
-    if(!result) {
-        // error already logged in runScriptInternal
+    auto result = state_.safe_script(scriptStr, sol::script_pass_on_error);
+
+    auto validation = validateExecution(result);
+    if(!validation) {
+        LOG_ERROR(
+            "ScriptSystem", "{} | {}", validation.error, am->getAssetPath(filePath).generic_string()
+        );
         return std::nullopt;
     }
 
-    if(result.value().get_type() != sol::type::table) {
+    if(result.get_type() != sol::type::table) {
         LOG_ERROR(
             "ScriptSystem", "script does not return table | {}",
             am->getAssetPath(filePath).generic_string()
@@ -63,16 +72,26 @@ auto ScriptSystem::runFile(const std::string& filePath) -> ScriptInstance {
         return std::nullopt;
     }
 
-    ScriptTable table{filePath, sol::table(result.value())};
+    ScriptTable table{filePath, static_cast<sol::table>(result)};
     return table;
 }
 
 bool ScriptSystem::runScript(const std::string& script) {
     TENGINE_ASSERT(initialized_, "ScriptSystem is not initialized");
-    if(!runScriptInternal(script)) {
+
+    auto result = state_.safe_script(script, sol::script_pass_on_error);
+    auto validation = validateExecution(result);
+    if(!validation) {
+        LOG_ERROR("ScriptSystem", "{}", validation.error);
         return false;
     }
     return true;
+}
+
+auto ScriptSystem::validateExecution(const ScriptResult& executionResult) const
+    -> ValidationResult {
+    TENGINE_ASSERT(initialized_, "ScriptSystem is not initialized");
+    return validateExecutionInternal(executionResult);
 }
 
 auto ScriptSystem::function(const std::string& name, const ScriptInstance& instance) const
@@ -80,41 +99,24 @@ auto ScriptSystem::function(const std::string& name, const ScriptInstance& insta
     TENGINE_ASSERT(initialized_, "ScriptSystem is not initialized");
     TENGINE_ASSERT(instance, "instance is null");
 
-    // TODO: Simplify this!
-    // You don't need to iterate through keys, you can use the [] operator for direct lookup
     auto instVal = instance.value();
-    for(auto&& pair : instVal.table.pairs()) {
-        sol::object key = pair.first;
-        auto keyStr = key.as<std::string>();
-
-        if(keyStr == name) {
-            if(!pair.second.is<sol::safe_function>()) {
-                LOG_ERROR(
-                    "ScriptSystem", "script {} has {} but it is not a function", instVal.path, name
-                );
-                return std::nullopt;
-            }
-            return pair.second;
-        }
-    }
-    return std::nullopt;
-}
-
-auto ScriptSystem::runScriptInternal(const std::string& script, const std::string& filePath)
-    -> std::optional<sol::protected_function_result> {
-    auto result = state_.safe_script(script);
-    if(result.status() != sol::call_status::ok) {
-        sol::error error = result;
-
-        if(!filePath.empty()) {
-            LOG_ERROR("ScriptSystem", "{} | {}", error.what(), filePath);
-        } else {
-            LOG_ERROR("ScriptSystem", "{}", error.what());
-        }
-
+    auto fn = instVal.table[name];
+    if(!fn.is<sol::safe_function>()) {
+        LOG_ERROR("ScriptSystem", "script {} has {} but it is not a function", instVal.path, name);
         return std::nullopt;
     }
-    return result;
+    return fn;
+}
+
+[[nodiscard]] auto ScriptSystem::validateExecutionInternal(
+    const ScriptResult& executionResult
+) const -> ValidationResult {
+    if(!executionResult.valid()) {
+        sol::error err = executionResult;
+        std::string error = err.what();
+        return {false, std::move(error)};
+    }
+    return {true, {}};
 }
 
 }  // namespace tengine
