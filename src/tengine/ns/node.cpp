@@ -31,17 +31,8 @@ void Node::setScriptPath(const std::string& scriptPath) {
 void Node::addChild(const NodePtr& child) {
     TENGINE_ASSERT(child, "child is nullptr");
     TENGINE_ASSERT(child.get() != this, "node {} cannot be it's own child", name_);
-    TENGINE_ASSERT(
-        !child->isAncestorOf(shared_from_this()), "adding {} under {} would create hierarchy cycle",
-        child->name(), name_
-    );
     TENGINE_ASSERT(!child->parent(), "child node {} already has a parent", child->name());
     TENGINE_ASSERT(!child->tree_, "child {} already belongs to a tree", child->name());
-
-    if(tree_) {
-        tree_->addChild(shared_from_this(), child);
-        return;
-    }
 
     auto [_, inserted] = children_.emplace(child->name(), child);
 
@@ -52,15 +43,14 @@ void Node::addChild(const NodePtr& child) {
     // it might be worth to enforce this with RegEx check
 
     child->setParent(shared_from_this());
+
+    if(tree_) {
+        child->setTree(tree_);
+    }
 }
 
 void Node::removeChild(const NodePtr& child) {
     TENGINE_ASSERT(child, "child is nullptr");
-
-    if(tree_) {
-        tree_->removeChild(shared_from_this(), child);
-        return;
-    }
 
     auto actualParent = child->parent();
 
@@ -76,6 +66,10 @@ void Node::removeChild(const NodePtr& child) {
     );
 
     child->resetParent();
+    if(tree_) {
+        child->setTree(nullptr);
+        return;
+    }
     children_.erase(it);
 }
 
@@ -95,23 +89,33 @@ auto Node::parent() const -> NodePtr {
     return parent_.lock();
 }
 
-bool Node::isAncestorOf(const NodePtr& node) const {
-    auto current = node->parent();
-    while(current) {
-        if(current.get() == this) {
-            return true;
-        }
-        current = current->parent();
-    }
-    return false;
-}
-
 void Node::setTree(SceneTree* tree) {
+    TENGINE_ASSERT(tree, "tree is nullptr");
     tree_ = tree;
+
+    if(updateFn_) {
+        tree_->registerForUpdate(shared_from_this());
+    }
 
     for(auto&& [_, c] : children_) {
         c->setTree(tree);
     }
+
+    ready();
+}
+
+void Node::unsetTree() {
+    TENGINE_ASSERT(tree_, "node {} is not part of a tree", name_);
+
+    if(updateFn_) {
+        tree_->unregisterForUpdate(shared_from_this());
+    }
+
+    for(auto&& [_, c] : children_) {
+        c->unsetTree();
+    }
+
+    tree_ = nullptr;
 }
 
 void Node::load() {
@@ -134,6 +138,7 @@ void Node::load() {
         updateFn_ = update;
     }
 
+    // load derived of this class
     loadInternal();
 }
 
@@ -144,10 +149,11 @@ void Node::ready() {
     for(auto&& [_, c] : children_) {
         c->ready();
     }
+
     // ready derived of this class
     readyInternal();
 
-    // finaly call ready from script
+    // finally call ready from script
     if(readyFn_) {
         auto result = readyFn_.value()(script_);
         auto validation = ScriptSystem::get()->validateExecution(result);
@@ -184,12 +190,6 @@ void Node::update(f32 dt) {
                 AssetManager::get()->getAssetPath(scriptPath_).generic_string()
             );
         }
-    }
-
-    updateInternal(dt);
-
-    for(auto&& [_, c] : children_) {
-        c->update(dt);
     }
 }
 

@@ -29,9 +29,8 @@ public:
     void resetParent();
     [[nodiscard]] auto parent() const -> NodePtr;
 
-    [[nodiscard]] bool isAncestorOf(const NodePtr& node) const;
-
     void setTree(SceneTree* tree);
+    void unsetTree();
 
 public:
     // engine only
@@ -58,7 +57,6 @@ private:
     ScriptInstance script_;
     ScriptFunction readyFn_;
     ScriptFunction updateFn_;
-    ScriptFunction postUpdateFn_;
 
 private:
     friend class SceneTree;

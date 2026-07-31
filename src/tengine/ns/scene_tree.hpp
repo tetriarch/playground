@@ -10,27 +10,16 @@
 
 namespace tengine {
 
-enum class TreeState {
-    Idle,
-    GettingReady,
-    Updating
-};
-
 class SceneTree {
 public:
     SceneTree();
 
 public:
     void setSceneRoot(const NodePtr& scene);
-    void addChild(const NodePtr& parent, const NodePtr& child);
-    void removeChild(const NodePtr& parent, const NodePtr& child);
-
-    void beginModificationQueue();
-    void endModificationQueue();
-    void applyModifications();
+    void registerForUpdate(const NodePtr& node);
+    void unregisterForUpdate(const NodePtr& node);
 
 public:
-    void ready();
     void update(f32 dt);
     void render();
 
@@ -38,17 +27,10 @@ public:
     auto root() const -> const Node*;
 
 private:
-    void readyImmediate();
-    void setSceneRootImmediate(const NodePtr& scene);
-    void addChildImmediate(const NodePtr& parent, const NodePtr& child);
-    void removeChildImmediate(const NodePtr& parent, const NodePtr& child);
-    void readyNodeImmediate(const NodePtr& node);
-
-private:
-    bool active_;
     NodePtr root_;
-    TreeState state_;
-    std::vector<std::function<void()>> modifications_;
+    std::vector<NodeHandle> updateNodes_;
+    std::vector<NodeHandle> renderNodes_;
+    bool unordered_;
 };
 
 }  // namespace tengine

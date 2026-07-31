@@ -46,7 +46,6 @@ int main(int argc, char** argv) {
         player->load();
 
         tree.setSceneRoot(world);
-        tree.ready();
         playerHandle = player;
     }
 
@@ -54,15 +53,12 @@ int main(int argc, char** argv) {
 
     for(u32 x = 0; x < 2; x++) {
         std::println("== Begin Frame ==");
-        tree.applyModifications();
-        tree.beginModificationQueue();
         if(x == 0) {
             if(auto player = playerHandle.lock()) {
-                tree.addChild(player, std::make_shared<Node3D>("Shield"));
+                player->addChild(std::make_shared<Node3D>("Shield"));
             }
         }
         tree.update(DELTA_TIME);
-        tree.endModificationQueue();
 
         tree.render();
         std::println("== End Frame ==");
