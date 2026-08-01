@@ -48,11 +48,11 @@ public:
     void render();
 
 protected:
-    // these are implemented by derived classes
-    virtual void loadInternal() {};
-    virtual void readyInternal() {};
-    virtual void updateInternal(f32 dt) {};
-    virtual void renderInternal() {};
+    // these are for derived Nodes for their mechanics to work
+    virtual bool isRenderable() const;
+    virtual void loadDerived() {};
+    virtual void readyDerived() {};
+    virtual void renderDerived() {};
 
 private:
     std::string name_;
@@ -66,9 +66,6 @@ private:
     Node* parent_;
     std::unordered_map<std::string, NodePtr> children_;
     SceneTree* tree_;
-
-protected:
-    bool isRenderable_;
 };
 
 }  // namespace tengine

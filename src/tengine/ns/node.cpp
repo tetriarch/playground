@@ -6,11 +6,10 @@
 
 namespace tengine {
 
-Node::Node() : name_("Node"), scriptPath_(""), depth_(0), isRenderable_(false) {
+Node::Node() : name_("Node"), scriptPath_(""), depth_(0) {
 }
 
-Node::Node(const std::string& name)
-    : name_(name), scriptPath_(""), depth_(0), isRenderable_(false) {
+Node::Node(const std::string& name) : name_(name), scriptPath_(""), depth_(0) {
 }
 
 auto Node::name() const -> const std::string& {
@@ -104,7 +103,7 @@ void Node::enterTree(SceneTree* tree) {
         tree_->registerForUpdate(shared_from_this());
     }
 
-    if(isRenderable_) {
+    if(isRenderable()) {
         tree_->registerForRender(shared_from_this());
     }
 
@@ -151,14 +150,14 @@ void Node::load() {
     }
 
     // load derived of this class
-    loadInternal();
+    loadDerived();
 }
 
 void Node::ready() {
-    TENGINE_ASSERT(tree_, "node is not part of a tree");
+    TENGINE_ASSERT(tree_, "node {} is not part of a tree", name_);
 
     // ready derived of this class
-    readyInternal();
+    readyDerived();
 
     // finally call ready from script
     if(readyFn_) {
@@ -180,7 +179,7 @@ void Node::ready() {
 }
 
 void Node::update(f32 dt) {
-    TENGINE_ASSERT(tree_, "node is not part of a tree");
+    TENGINE_ASSERT(tree_, "node {} is not part of a tree", name_);
     if(updateFn_) {
         // we call update with (self, dt) parameters
         auto result = updateFn_.value()(script_, dt);
@@ -201,12 +200,13 @@ void Node::update(f32 dt) {
 }
 
 void Node::render() {
-    TENGINE_ASSERT(tree_, "node is not part of a tree");
-    renderInternal();
+    TENGINE_ASSERT(tree_, "node {} is not part of a tree", name_);
 
-    for(auto&& [_, c] : children_) {
-        c->render();
-    }
+    renderDerived();
+}
+
+bool Node::isRenderable() const {
+    return false;
 }
 
 }  // namespace tengine
