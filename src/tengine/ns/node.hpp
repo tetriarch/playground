@@ -30,10 +30,10 @@ public:
 
     void setParent(const NodePtr& parent);
     void resetParent();
-    [[nodiscard]] auto parent() const -> NodePtr;
+    [[nodiscard]] Node* parent() const;
 
-    void setTree(SceneTree* tree);
-    void unsetTree();
+    void enterTree(SceneTree* tree);
+    void exitTree();
 
 public:
     // engine only
@@ -63,9 +63,12 @@ private:
     ScriptFunction updateFn_;
 
 private:
-    NodeHandle parent_;
+    Node* parent_;
     std::unordered_map<std::string, NodePtr> children_;
     SceneTree* tree_;
+
+protected:
+    bool isRenderable_;
 };
 
 }  // namespace tengine

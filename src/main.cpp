@@ -64,31 +64,4 @@ int main(int argc, char** argv) {
         tree.render();
         std::println("== End Frame ==");
     }
-    //
-    // lua.set_function("myprint", [](std::string msg) { std::println("tengine:Lua:> {}", msg); });
-    // lua.set_function("strEqual", [](const std::string& a, const std::string& b) -> bool {
-    //     return a == b;
-    // });
-
-    // lua["hello"]("Tetriarch", "nice to know you");
-    // lua.script(R"( require("utils").log("Direct Lua string execution"))");
-
-    // log has to exist and has to be a function
-    // std::string fnName = "log";
-    // auto log = luaHandle[fnName];
-    // TENGINE_ASSERT(log != sol::nil, "luaHandle has no object named {}", fnName);
-    // TENGINE_ASSERT(log.get_type() == sol::type::function, "{} is not a function", fnName);
-    //
-    // log("table test");
-    //
-    // std::string addition = lua["add"]("a", "b");
-    // std::println("{}", addition);
-
-    // we start here
-    // tengine::NodeTree nodeTree;
-    // tengine::Node3D node;
-    // auto transform = node.transform();
-    // transform.position.x = 10.f;
-    // node.setTransform(transform);
-    // node.ready();
 }

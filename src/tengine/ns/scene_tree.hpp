@@ -18,6 +18,8 @@ public:
     void setSceneRoot(const NodePtr& scene);
     void registerForUpdate(const NodePtr& node);
     void unregisterForUpdate(const NodePtr& node);
+    void registerForRender(const NodePtr& node);
+    void unregisterForRender(const NodePtr& node);
     void orderTreeUpdates();
 
 public:
@@ -29,8 +31,8 @@ public:
 
 private:
     NodePtr root_;
-    std::vector<NodeHandle> updateNodes_;
-    std::vector<NodeHandle> renderNodes_;
+    std::vector<NodePtr> updateNodes_;
+    std::vector<NodePtr> renderNodes_;
     bool unordered_;
 };
 

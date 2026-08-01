@@ -6,10 +6,11 @@
 
 namespace tengine {
 
-Node::Node() : name_("Node"), scriptPath_(""), depth_(0) {
+Node::Node() : name_("Node"), scriptPath_(""), depth_(0), isRenderable_(false) {
 }
 
-Node::Node(const std::string& name) : name_(name), scriptPath_(""), depth_(0) {
+Node::Node(const std::string& name)
+    : name_(name), scriptPath_(""), depth_(0), isRenderable_(false) {
 }
 
 auto Node::name() const -> const std::string& {
@@ -54,7 +55,7 @@ void Node::addChild(const NodePtr& child) {
     child->setDepth(depth_ + 1);
 
     if(tree_) {
-        child->setTree(tree_);
+        child->enterTree(tree_);
     }
 }
 
@@ -63,8 +64,7 @@ void Node::removeChild(const NodePtr& child) {
 
     auto actualParent = child->parent();
     TENGINE_ASSERT(
-        actualParent && actualParent.get() == this, "node {} is not a child of {}", child->name(),
-        name_
+        actualParent && actualParent == this, "node {} is not a child of {}", child->name(), name_
     );
 
     auto it = children_.find(child->name());
@@ -74,7 +74,7 @@ void Node::removeChild(const NodePtr& child) {
 
     child->resetParent();
     if(tree_) {
-        child->setTree(nullptr);
+        child->enterTree(nullptr);
         return;
     }
     children_.erase(it);
@@ -85,18 +85,18 @@ auto Node::children() const -> const std::unordered_map<std::string, NodePtr>& {
 }
 
 void Node::setParent(const NodePtr& parent) {
-    parent_ = parent;
+    parent_ = parent.get();
 }
 
 void Node::resetParent() {
-    parent_.reset();
+    parent_ = nullptr;
 }
 
-auto Node::parent() const -> NodePtr {
-    return parent_.lock();
+Node* Node::parent() const {
+    return parent_;
 }
 
-void Node::setTree(SceneTree* tree) {
+void Node::enterTree(SceneTree* tree) {
     TENGINE_ASSERT(tree, "tree is nullptr");
     tree_ = tree;
 
@@ -104,14 +104,19 @@ void Node::setTree(SceneTree* tree) {
         tree_->registerForUpdate(shared_from_this());
     }
 
-    for(auto&& [_, c] : children_) {
-        c->setTree(tree);
+    if(isRenderable_) {
+        tree_->registerForRender(shared_from_this());
     }
 
+    for(auto&& [_, c] : children_) {
+        c->enterTree(tree);
+    }
+
+    // since we call enter tree on children, the children are ready before parent
     ready();
 }
 
-void Node::unsetTree() {
+void Node::exitTree() {
     TENGINE_ASSERT(tree_, "node {} is not part of a tree", name_);
 
     if(updateFn_) {
@@ -119,7 +124,7 @@ void Node::unsetTree() {
     }
 
     for(auto&& [_, c] : children_) {
-        c->unsetTree();
+        c->exitTree();
     }
 
     tree_ = nullptr;
@@ -151,11 +156,6 @@ void Node::load() {
 
 void Node::ready() {
     TENGINE_ASSERT(tree_, "node is not part of a tree");
-
-    // ready children first
-    for(auto&& [_, c] : children_) {
-        c->ready();
-    }
 
     // ready derived of this class
     readyInternal();

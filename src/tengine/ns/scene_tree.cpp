@@ -16,32 +16,52 @@ SceneTree::SceneTree() : root_(nullptr), unordered_(false) {
 
 void SceneTree::setSceneRoot(const NodePtr& scene) {
     if(root_ || !scene) {
-        root_->unsetTree();
+        root_->exitTree();
     } else {
         root_ = scene;
-        root_->setTree(this);
+        root_->enterTree(this);
     }
 }
 
 void SceneTree::registerForUpdate(const NodePtr& node) {
     TENGINE_ASSERT(node, "node is nullptr");
+    TENGINE_ASSERT(
+        std::ranges::find(updateNodes_, node) == updateNodes_.end(),
+        "node {} is already registered for update", node->name()
+    );
 
-    // TODO: - check whether the node is already in the std::vector
-    // - see std::ranges for that - vector holds weak references while we work with strong one here
-    // - mark the tree as unordered as update has to happen in descending order from root to leaves
     updateNodes_.push_back(node);
     unordered_ = true;
 }
 
 void SceneTree::unregisterForUpdate(const NodePtr& node) {
     TENGINE_ASSERT(node, "node is nullptr");
-    // TODO: - check whether the node is present in the std::vector
-    // - see std::ranges for that - vector holds weak references while we work with strong one here
-    // - reset resulting iterator if node is found
-    // - mark the tree as unordered as update has to happen in descending order from root to leaves
-    // - reseted node should be deleted
 
-    // *it->reset();
+    auto it = std::ranges::find(updateNodes_, node);
+    TENGINE_ASSERT(it != updateNodes_.end(), "node {} is not registered for update", node->name());
+
+    *it = nullptr;
+    unordered_ = true;
+}
+
+void SceneTree::registerForRender(const NodePtr& node) {
+    TENGINE_ASSERT(node, "node is nullptr");
+    TENGINE_ASSERT(
+        std::ranges::find(renderNodes_, node) == renderNodes_.end(),
+        "node {} is already registered for render", node->name()
+    );
+
+    renderNodes_.push_back(node);
+    unordered_ = true;
+}
+
+void SceneTree::unregisterForRender(const NodePtr& node) {
+    TENGINE_ASSERT(node, "node is nullptr");
+
+    auto it = std::ranges::find(renderNodes_, node);
+    TENGINE_ASSERT(it != renderNodes_.end(), "node {} is not registered for render", node->name());
+
+    *it = nullptr;
     unordered_ = true;
 }
 
@@ -69,11 +89,11 @@ void SceneTree::orderTreeUpdates() {
     std::sort(renderNodes_.begin(), renderNodes_.end(), compare);
 
     // remove null nodes at the end of lists
-    while(!updateNodes_.empty() && !updateNodes_.back().lock()) {
+    while(!updateNodes_.empty() && !updateNodes_.back()) {
         updateNodes_.pop_back();
     }
 
-    while(!renderNodes_.empty() && !renderNodes_.back().lock()) {
+    while(!renderNodes_.empty() && !renderNodes_.back()) {
         renderNodes_.pop_back();
     }
 
@@ -85,7 +105,7 @@ void SceneTree::update(f32 dt) {
 
     u64 count = updateNodes_.size();
     for(u64 i = 0; i < count; i++) {
-        auto node = updateNodes_[i].lock();
+        auto node = updateNodes_[i];
         if(node) {
             node->update(dt);
         }
