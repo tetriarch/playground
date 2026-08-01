@@ -45,6 +45,41 @@ void SceneTree::unregisterForUpdate(const NodePtr& node) {
     unordered_ = true;
 }
 
+void SceneTree::orderTreeUpdates() {
+    if(!unordered_) {
+        return;
+    }
+
+    // comparison function, lower depth == earlier update
+    auto compare = [](const NodeHandle& lhs, const NodeHandle& rhs) {
+        auto l = lhs.lock();
+        auto r = rhs.lock();
+
+        if(!l) return false;
+        if(!r) return true;
+
+        auto lDepth = l->depth();
+        auto rDepth = r->depth();
+
+        return lDepth < rDepth;
+    };
+
+    // sort lists
+    std::sort(updateNodes_.begin(), updateNodes_.end(), compare);
+    std::sort(renderNodes_.begin(), renderNodes_.end(), compare);
+
+    // remove null nodes at the end of lists
+    while(!updateNodes_.empty() && !updateNodes_.back().lock()) {
+        updateNodes_.pop_back();
+    }
+
+    while(!renderNodes_.empty() && !renderNodes_.back().lock()) {
+        renderNodes_.pop_back();
+    }
+
+    unordered_ = false;
+}
+
 void SceneTree::update(f32 dt) {
     TENGINE_ASSERT(root_, "root_ is nullptr");
 

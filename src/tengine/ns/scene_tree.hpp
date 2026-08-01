@@ -18,6 +18,7 @@ public:
     void setSceneRoot(const NodePtr& scene);
     void registerForUpdate(const NodePtr& node);
     void unregisterForUpdate(const NodePtr& node);
+    void orderTreeUpdates();
 
 public:
     void update(f32 dt);

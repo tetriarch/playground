@@ -6,10 +6,10 @@
 
 namespace tengine {
 
-Node::Node() : name_("Node"), scriptPath_("") {
+Node::Node() : name_("Node"), scriptPath_(""), depth_(0) {
 }
 
-Node::Node(const std::string& name) : name_(name), scriptPath_("") {
+Node::Node(const std::string& name) : name_(name), scriptPath_(""), depth_(0) {
 }
 
 auto Node::name() const -> const std::string& {
@@ -28,6 +28,14 @@ void Node::setScriptPath(const std::string& scriptPath) {
     scriptPath_ = scriptPath;
 }
 
+u32 Node::depth() const {
+    return depth_;
+}
+
+void Node::setDepth(u32 depth) {
+    depth_ = depth;
+}
+
 void Node::addChild(const NodePtr& child) {
     TENGINE_ASSERT(child, "child is nullptr");
     TENGINE_ASSERT(child.get() != this, "node {} cannot be it's own child", name_);
@@ -43,6 +51,7 @@ void Node::addChild(const NodePtr& child) {
     // it might be worth to enforce this with RegEx check
 
     child->setParent(shared_from_this());
+    child->setDepth(depth_ + 1);
 
     if(tree_) {
         child->setTree(tree_);
@@ -53,14 +62,12 @@ void Node::removeChild(const NodePtr& child) {
     TENGINE_ASSERT(child, "child is nullptr");
 
     auto actualParent = child->parent();
-
     TENGINE_ASSERT(
         actualParent && actualParent.get() == this, "node {} is not a child of {}", child->name(),
         name_
     );
 
     auto it = children_.find(child->name());
-
     TENGINE_ASSERT(
         it != children_.end() && it->second == child, "parent-child hierarchy is inconsistent"
     );

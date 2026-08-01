@@ -52,6 +52,7 @@ int main(int argc, char** argv) {
     // ---------------------------------------------------------------------------------------- loop
 
     for(u32 x = 0; x < 2; x++) {
+        tree.orderTreeUpdates();
         std::println("== Begin Frame ==");
         if(x == 0) {
             if(auto player = playerHandle.lock()) {

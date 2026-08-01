@@ -20,6 +20,9 @@ public:
     [[nodiscard]] auto scriptPath() const -> const std::string&;
     void setScriptPath(const std::string& scriptPath);
 
+    u32 depth() const;
+    void setDepth(u32 depth);
+
 public:
     void addChild(const NodePtr& child);
     void removeChild(const NodePtr& child);
@@ -54,12 +57,12 @@ protected:
 private:
     std::string name_;
     std::string scriptPath_;
+    u32 depth_;
     ScriptInstance script_;
     ScriptFunction readyFn_;
     ScriptFunction updateFn_;
 
 private:
-    friend class SceneTree;
     NodeHandle parent_;
     std::unordered_map<std::string, NodePtr> children_;
     SceneTree* tree_;
