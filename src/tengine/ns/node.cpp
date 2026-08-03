@@ -161,7 +161,7 @@ void Node::ready() {
 
     // finally call ready from script
     if(readyFn_) {
-        auto result = readyFn_.value()(script_);
+        auto result = readyFn_.value()(script_->table);
         auto validation = ScriptSystem::get()->validateExecution(result);
         if(!validation) {
             LOG_FATAL(
@@ -182,7 +182,7 @@ void Node::update(f32 dt) {
     TENGINE_ASSERT(tree_, "node {} is not part of a tree", name_);
     if(updateFn_) {
         // we call update with (self, dt) parameters
-        auto result = updateFn_.value()(script_, dt);
+        auto result = updateFn_.value()(script_->table, dt);
         auto validation = ScriptSystem::get()->validateExecution(result);
         if(!validation) {
             LOG_FATAL(

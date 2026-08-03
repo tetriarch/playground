@@ -20,6 +20,9 @@ public:
     [[nodiscard]] auto transform() const -> const Transform&;
     void setTransform(const Transform& transform);
 
+public:
+    void readyDerived() override;
+
 private:
     Transform transform_;
 };

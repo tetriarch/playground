@@ -53,15 +53,19 @@ int main(int argc, char** argv) {
 
     for(u32 x = 0; x < 2; x++) {
         tree.orderTreeUpdates();
-        std::println("== Begin Frame ==");
         if(x == 0) {
             if(auto player = playerHandle.lock()) {
-                player->addChild(std::make_shared<Node3D>("Shield"));
+                auto pl = static_pointer_cast<Node3D>(player);
+                pl->addChild(std::make_shared<Node3D>("Shield"));
+                auto position = pl->transform().position;
+                LOG_INFO(
+                    "main", "player->transform_.position: [{}, {}, {}]", position.x, position.y,
+                    position.z
+                );
             }
         }
         tree.update(DELTA_TIME);
 
         tree.render();
-        std::println("== End Frame ==");
     }
 }

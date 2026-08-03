@@ -22,4 +22,10 @@ void Node3D::setTransform(const Transform& transform) {
     transform_ = transform;
 }
 
+void Node3D::readyDerived() {
+    if(script_) {
+        script_->table["transform_"].set(&transform_);
+    }
+}
+
 }  // namespace tengine

@@ -58,7 +58,6 @@ private:
     std::string name_;
     std::string scriptPath_;
     u32 depth_;
-    ScriptInstance script_;
     ScriptFunction readyFn_;
     ScriptFunction updateFn_;
 
@@ -66,6 +65,9 @@ private:
     Node* parent_;
     std::unordered_map<std::string, NodePtr> children_;
     SceneTree* tree_;
+
+protected:
+    ScriptInstance script_;
 };
 
 }  // namespace tengine

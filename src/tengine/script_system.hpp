@@ -86,6 +86,8 @@ private:
     [[nodiscard]] auto validateExecutionInternal(const ScriptResult& executionResult) const
         -> ValidationResult;
 
+    void registerGlobalTypes();
+
 private:
     sol::state state_;
     bool initialized_;

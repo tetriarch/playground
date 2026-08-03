@@ -7,6 +7,7 @@
 #include "tengine/script_system.hpp"
 
 #include "tengine/asset_manager.hpp"
+#include "tengine/transform.hpp"
 #include "tengine/utils/logger.hpp"
 
 namespace tengine {
@@ -38,6 +39,7 @@ bool ScriptSystem::init() {
         initialized_ = false;
         return initialized_;
     }
+    registerGlobalTypes();
     initialized_ = true;
     return initialized_;
 }
@@ -117,6 +119,24 @@ auto ScriptSystem::function(const std::string& name, const ScriptInstance& insta
         return {false, std::move(error)};
     }
     return {true, {}};
+}
+
+void ScriptSystem::registerGlobalTypes() {
+    auto vec3Type = state_.new_usertype<glm::vec3>("Vec3");
+    vec3Type["x"] = &glm::vec3::x;
+    vec3Type["y"] = &glm::vec3::y;
+    vec3Type["z"] = &glm::vec3::z;
+
+    auto quatType = state_.new_usertype<glm::quat>("Quat");
+    quatType["x"] = &glm::quat::x;
+    quatType["y"] = &glm::quat::y;
+    quatType["z"] = &glm::quat::z;
+    quatType["w"] = &glm::quat::w;
+
+    auto transformType = state_.new_usertype<Transform>("Transform");
+    transformType["position"] = &Transform::position;
+    transformType["rotation"] = &Transform::rotation;
+    transformType["scale"] = &Transform::scale;
 }
 
 }  // namespace tengine
