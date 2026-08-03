@@ -6,6 +6,7 @@
 
 #include "tengine/script_system.hpp"
 
+#include "tengine/aliases.hpp"
 #include "tengine/asset_manager.hpp"
 #include "tengine/transform.hpp"
 #include "tengine/utils/logger.hpp"
@@ -122,7 +123,8 @@ auto ScriptSystem::function(const std::string& name, const ScriptInstance& insta
 }
 
 void ScriptSystem::registerGlobalTypes() {
-    auto vec3Type = state_.new_usertype<glm::vec3>("Vec3");
+    auto vec3Type =
+        state_.new_usertype<glm::vec3>("Vec3", sol::constructors<glm::vec3(f32, f32, f32)>());
     vec3Type["x"] = &glm::vec3::x;
     vec3Type["y"] = &glm::vec3::y;
     vec3Type["z"] = &glm::vec3::z;
