@@ -44,10 +44,20 @@ int main(int argc, char** argv) {
 
     SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 
+    std::string deviceName;
+#ifdef __linux__
+    deviceName = "vulkan";
+#elifdef _WIN32 || _WIN64
+    deviceName = "direct3d12";
+#else
+    deviceName = "metal";
+#endif
+
     SDL_GPUDevice* gpuDevice = SDL_CreateGPUDevice(
         SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL, true,
-        "vulkan"
+        deviceName.c_str()
     );
+
     if(!gpuDevice) {
         LOG_FATAL("Renderer", "{}", SDL_GetError());
     }
@@ -55,10 +65,6 @@ int main(int argc, char** argv) {
     if(!SDL_ClaimWindowForGPUDevice(gpuDevice, window)) {
         LOG_FATAL("Renderer", "{}", SDL_GetError());
     }
-
-    SDL_SetGPUSwapchainParameters(
-        gpuDevice, window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_IMMEDIATE
-    );
 
     bool running = true;
     SDL_Event event;
