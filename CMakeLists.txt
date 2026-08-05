@@ -54,6 +54,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     -Wpedantic
     -Werror
     -Wno-unused-parameter
+    -Wno-missing-designated-field-initializers
 )
 
 # compile definitions
@@ -68,7 +69,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PROJECT_SOURCE_DIR}/src/tengine/pch.hpp>)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(${PROJECT_NAME} PRIVATE lua::lua sol2::sol2 glm::glm)
+target_link_libraries(${PROJECT_NAME} PRIVATE lua::lua sol2::sol2 glm::glm SDL3::SDL3)
 
 # link compile_commands.json
 add_custom_command(

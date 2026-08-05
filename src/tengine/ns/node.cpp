@@ -6,10 +6,11 @@
 
 namespace tengine {
 
-Node::Node() : name_("Node"), scriptPath_(""), depth_(0) {
+Node::Node() : name_("Node"), scriptPath_(""), depth_(0), parent_(nullptr), tree_(nullptr) {
 }
 
-Node::Node(const std::string& name) : name_(name), scriptPath_(""), depth_(0) {
+Node::Node(const std::string& name)
+    : name_(name), scriptPath_(""), depth_(0), parent_(nullptr), tree_(nullptr) {
 }
 
 auto Node::name() const -> const std::string& {
