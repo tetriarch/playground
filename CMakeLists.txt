@@ -80,10 +80,19 @@ add_custom_command(
         "${CMAKE_SOURCE_DIR}/compile_commands.json"
 )
 
+# compile shaders
+add_custom_target(
+    compile_shaders
+    COMMAND python ${CMAKE_SOURCE_DIR}/compile_shaders.py ${CMAKE_SOURCE_DIR}/assets_pre/shaders ${CMAKE_SOURCE_DIR}/assets/shaders
+    VERBATIM
+)
+
 add_custom_target(
     copy_assets
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets
     $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets
+    VERBATIM
 )
 
+add_dependencies(copy_assets compile_shaders)
 add_dependencies(${PROJECT_NAME} copy_assets)
