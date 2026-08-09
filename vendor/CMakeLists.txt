@@ -5,3 +5,7 @@ set_target_properties(lua::lua
     INTERFACE_INCLUDE_DIRECTORIES 
     "${CMAKE_CURRENT_SOURCE_DIR}/lua/include"
 )
+
+set(stb_SRCS "stb/stb_image.cpp" "stb/stb_image.h")
+add_library(stb STATIC ${stb_SRCS})
+target_include_directories(stb PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

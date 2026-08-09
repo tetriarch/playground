@@ -57,6 +57,8 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     -Wno-missing-designated-field-initializers
 )
 
+target_compile_definitions(playground PRIVATE GLM_FORCE_QUAT_DATA_XYZW)
+
 # compile definitions
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     $<$<CONFIG:Debug>:
@@ -69,7 +71,13 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PROJECT_SOURCE_DIR}/src/tengine/pch.hpp>)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(${PROJECT_NAME} PRIVATE lua::lua sol2::sol2 glm::glm SDL3::SDL3)
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    lua::lua
+    sol2::sol2
+    glm::glm
+    SDL3::SDL3
+    stb
+)
 
 # link compile_commands.json
 add_custom_command(

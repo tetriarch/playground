@@ -7,6 +7,7 @@
 #include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_video.h>
+#include <stb/stb_image.h>
 
 #include <tengine/asset_manager.hpp>
 #include <tengine/ns/node_3D.hpp>
@@ -23,13 +24,14 @@ const u32 WINDOW_HEIGHT = 720;
 struct Vertex {
     f32 position[3];
     f32 color[4];
+    f32 uv[2];
 };
 
 std::vector<Vertex> quad{
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
-    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
-    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.0f}, {1.0f, 0.0f, 1.0f, 1.0f}},
+    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
+    {{-0.5f, 0.5f, 0.0f}, {1.0f, 0.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
 };
 
 std::vector<u32> indices{0, 1, 2, 2, 3, 0};
@@ -71,17 +73,31 @@ int main(int argc, char** argv) {
     bool running = true;
     SDL_Event event;
 
-    AssetManager::get()->setAssetRoot("assets");
+    auto am = AssetManager::get();
+    am->setAssetRoot("assets");
     auto scriptSys = tengine::ScriptSystem::get();
     auto result = scriptSys->runScript("print(\"Welcome to TEngine\\n\")");
     if(!result) {
         LOG_ERROR("main", "failed to execute script");
     }
 
+    // -------------------------------------------------------------------------------------- assets
+    auto rawImageData = am->loadRaw("textures/T_pawn_C.png");
+    if(!rawImageData) {
+        LOG_ERROR("TextureLoader", "failed to load raw image data");
+    }
+    s32 imageWidth, imageHeight, imageChannelCount;
+    u8* imageData = stbi_load_from_memory(
+        rawImageData->data(), rawImageData->size(), &imageWidth, &imageHeight, &imageChannelCount, 0
+    );
+    if(!imageData) {
+        LOG_ERROR("TextureLoader", "failed to load image data");
+    }
+
     // ------------------------------------------------------------------------------- renderer init
 
     // --- vertex shader ---
-    auto vsCode = AssetManager::get()->loadRaw("shaders/unlit_color_vert.spv");
+    auto vsCode = am->loadRaw("shaders/unlit_color_vert.spv");
     if(!vsCode) {
         LOG_ERROR("AssetManager", "failed to load vertexShader");
     }
@@ -104,7 +120,7 @@ int main(int argc, char** argv) {
     vsCode->clear();
 
     // -- fragment shader ---
-    auto fsCode = AssetManager::get()->loadRaw("shaders/unlit_color_frag.spv");
+    auto fsCode = am->loadRaw("shaders/unlit_color_frag.spv");
     if(!fsCode) {
         LOG_ERROR("AssetManager", "failed to load vertexShader");
     }
@@ -115,11 +131,12 @@ int main(int argc, char** argv) {
         .entrypoint = "main",
         .format = SDL_GPU_SHADERFORMAT_SPIRV,
         .stage = SDL_GPU_SHADERSTAGE_FRAGMENT,
-        .num_samplers = 0,
+        .num_samplers = 1,
         .num_storage_textures = 0,
         .num_storage_buffers = 0,
         .num_uniform_buffers = 0,
     };
+
     SDL_GPUShader* fragmentShader = SDL_CreateGPUShader(gpuDevice, &fragmentShaderInfo);
     if(!fragmentShader) {
         LOG_ERROR("Shader", "{}", SDL_GetError());
@@ -141,14 +158,18 @@ int main(int argc, char** argv) {
         {.location = 1,
          .buffer_slot = 0,
          .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-         .offset = offsetof(Vertex, color)}
+         .offset = offsetof(Vertex, color)},
+        {.location = 2,
+         .buffer_slot = 0,
+         .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
+         .offset = offsetof(Vertex, uv)}
     };
 
     SDL_GPUVertexInputState vertexInputState = {
         .vertex_buffer_descriptions = vertexBufferDescriptions,
         .num_vertex_buffers = 1,
         .vertex_attributes = vertexAttributes,
-        .num_vertex_attributes = 2
+        .num_vertex_attributes = 3
     };
 
     SDL_GPUColorTargetBlendState colorTargetBlendState = {
@@ -245,6 +266,56 @@ int main(int argc, char** argv) {
     memcpy(indexData, indices.data(), indices.size() * sizeof(u32));
     SDL_UnmapGPUTransferBuffer(gpuDevice, indexTransferBuffer);
 
+    // --- texture setup ---
+    SDL_GPUTextureCreateInfo textureCreateInfo{
+        .type = SDL_GPU_TEXTURETYPE_2D,
+        .format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM_SRGB,
+        .usage = SDL_GPU_TEXTUREUSAGE_SAMPLER,
+        .width = static_cast<u32>(imageWidth),
+        .height = static_cast<u32>(imageHeight),
+        .layer_count_or_depth = 1,
+        .num_levels = 1,
+    };
+
+    SDL_GPUTexture* texture = SDL_CreateGPUTexture(gpuDevice, &textureCreateInfo);
+    if(!texture) {
+        LOG_ERROR("Texture", "{}", SDL_GetError());
+    }
+
+    SDL_SetGPUTextureName(gpuDevice, texture, "hello_world");
+
+    SDL_GPUTransferBufferCreateInfo textureTransferBufferInfo = {
+        .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+        .size = static_cast<u32>(imageWidth * imageHeight * imageChannelCount)
+    };
+
+    SDL_GPUTransferBuffer* textureTransferBuffer =
+        SDL_CreateGPUTransferBuffer(gpuDevice, &textureTransferBufferInfo);
+    if(!textureTransferBuffer) {
+        LOG_ERROR("Texture", "{}", SDL_GetError());
+    }
+
+    u8* textureData = (u8*)SDL_MapGPUTransferBuffer(gpuDevice, textureTransferBuffer, false);
+    if(!textureData) {
+        LOG_ERROR("Texture", "{}", SDL_GetError());
+    }
+    memcpy(textureData, imageData, imageWidth * imageHeight * imageChannelCount);
+    SDL_UnmapGPUTransferBuffer(gpuDevice, textureTransferBuffer);
+
+    SDL_GPUSamplerCreateInfo textureSamplerCreateInfo = {
+        .min_filter = SDL_GPU_FILTER_LINEAR,
+        .mag_filter = SDL_GPU_FILTER_LINEAR,
+        .mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_LINEAR,
+        .address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+        .address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+        .address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+    };
+
+    SDL_GPUSampler* textureSampler = SDL_CreateGPUSampler(gpuDevice, &textureSamplerCreateInfo);
+    if(!textureSampler) {
+        LOG_ERROR("Texture", "{}", SDL_GetError());
+    }
+
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gpuDevice);
     if(!commandBuffer) {
         LOG_FATAL("Renderer", "{}", SDL_GetError());
@@ -272,11 +343,32 @@ int main(int argc, char** argv) {
         .buffer = indexBuffer, .offset = 0, .size = static_cast<u32>(indices.size() * sizeof(u32))
     };
 
+    // where is the data
+    SDL_GPUTextureTransferInfo textureTransferInfo = {
+        .transfer_buffer = textureTransferBuffer,
+        .offset = 0,
+    };
+
+    // where to upload the data
+    SDL_GPUTextureRegion textureBufferRegion = {
+        .texture = texture,
+        .w = static_cast<u32>(imageWidth),
+        .h = static_cast<u32>(imageHeight),
+        .d = 1
+    };
+
     SDL_UploadToGPUBuffer(copyPass, &vertexTransferBufferLocation, &vertexBufferRegion, false);
     SDL_UploadToGPUBuffer(copyPass, &indexTransferBufferLocation, &indexBufferRegion, false);
+    SDL_UploadToGPUTexture(copyPass, &textureTransferInfo, &textureBufferRegion, false);
 
     SDL_EndGPUCopyPass(copyPass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
+
+    SDL_ReleaseGPUTransferBuffer(gpuDevice, vertexTransferBuffer);
+    SDL_ReleaseGPUTransferBuffer(gpuDevice, indexTransferBuffer);
+    SDL_ReleaseGPUTransferBuffer(gpuDevice, textureTransferBuffer);
+    rawImageData->clear();
+    stbi_image_free(imageData);
 
     // ---------------------------------------------------------------------------------- scene init
     SceneTree tree;
@@ -339,9 +431,12 @@ int main(int argc, char** argv) {
 
             SDL_GPUBufferBinding vertexBufferBindings[] = {{.buffer = vertexBuffer, .offset = 0}};
             SDL_GPUBufferBinding indexBufferBindings[] = {{.buffer = indexBuffer, .offset = 0}};
+            SDL_GPUTextureSamplerBinding textureSamplerBindings[] = {
+                {.texture = texture, .sampler = textureSampler}
+            };
             SDL_BindGPUVertexBuffers(renderPass, 0, vertexBufferBindings, 1);
             SDL_BindGPUIndexBuffer(renderPass, indexBufferBindings, SDL_GPU_INDEXELEMENTSIZE_32BIT);
-
+            SDL_BindGPUFragmentSamplers(renderPass, 0, textureSamplerBindings, 1);
             SDL_DrawGPUIndexedPrimitives(renderPass, indices.size(), 1, 0, 0, 0);
             SDL_EndGPURenderPass(renderPass);
         }
@@ -353,7 +448,8 @@ int main(int argc, char** argv) {
 
     // ------------------------------------------------------------------------------------- cleanup
 
-    SDL_ReleaseGPUTransferBuffer(gpuDevice, vertexTransferBuffer);
+    SDL_ReleaseGPUTexture(gpuDevice, texture);
+    SDL_ReleaseGPUBuffer(gpuDevice, indexBuffer);
     SDL_ReleaseGPUBuffer(gpuDevice, vertexBuffer);
     SDL_ReleaseWindowFromGPUDevice(gpuDevice, window);
     SDL_DestroyGPUDevice(gpuDevice);
