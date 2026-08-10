@@ -35,6 +35,7 @@ std::vector<Vertex> quad{
 };
 
 std::vector<u32> indices{0, 1, 2, 2, 3, 0};
+u32 indexCount = indices.size();
 
 int main(int argc, char** argv) {
     // --------------------------------------------------------------------------------- logger init
@@ -69,6 +70,10 @@ int main(int argc, char** argv) {
     if(!SDL_ClaimWindowForGPUDevice(gpuDevice, window)) {
         LOG_FATAL("Renderer", "{}", SDL_GetError());
     }
+
+    SDL_SetGPUSwapchainParameters(
+        gpuDevice, window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR_LINEAR, SDL_GPU_PRESENTMODE_VSYNC
+    );
 
     bool running = true;
     SDL_Event event;
@@ -364,11 +369,13 @@ int main(int argc, char** argv) {
     SDL_EndGPUCopyPass(copyPass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
 
-    SDL_ReleaseGPUTransferBuffer(gpuDevice, vertexTransferBuffer);
-    SDL_ReleaseGPUTransferBuffer(gpuDevice, indexTransferBuffer);
     SDL_ReleaseGPUTransferBuffer(gpuDevice, textureTransferBuffer);
+    SDL_ReleaseGPUTransferBuffer(gpuDevice, indexTransferBuffer);
+    SDL_ReleaseGPUTransferBuffer(gpuDevice, vertexTransferBuffer);
     rawImageData->clear();
     stbi_image_free(imageData);
+    indices.clear();
+    quad.clear();
 
     // ---------------------------------------------------------------------------------- scene init
     SceneTree tree;
@@ -437,7 +444,7 @@ int main(int argc, char** argv) {
             SDL_BindGPUVertexBuffers(renderPass, 0, vertexBufferBindings, 1);
             SDL_BindGPUIndexBuffer(renderPass, indexBufferBindings, SDL_GPU_INDEXELEMENTSIZE_32BIT);
             SDL_BindGPUFragmentSamplers(renderPass, 0, textureSamplerBindings, 1);
-            SDL_DrawGPUIndexedPrimitives(renderPass, indices.size(), 1, 0, 0, 0);
+            SDL_DrawGPUIndexedPrimitives(renderPass, indexCount, 1, 0, 0, 0);
             SDL_EndGPURenderPass(renderPass);
         }
 
