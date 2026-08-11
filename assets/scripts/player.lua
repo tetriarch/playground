@@ -10,7 +10,7 @@ local Player = {}
 
 function Player:ready()
     local tf = self.transform_.position
-    local v = Vec3.new(10.0, 0.0, 10.0)
+    local v = Vec3.new(0.0, 0.0, 1.0)
     self.transform_.position = v
 
     utils.log("player.transform_.position: [" .. tf.x .. ", " .. tf.y .. ", " .. tf.z .. "]")

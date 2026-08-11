@@ -13,11 +13,13 @@
 #include <tengine/ns/node_3D.hpp>
 #include <tengine/ns/scene_tree.hpp>
 #include <tengine/script_system.hpp>
+#include <tengine/transform.hpp>
 #include <tengine/utils/logger.hpp>
 
 using namespace tengine;
 
 const f32 DELTA_TIME = 0.01f;
+
 const u32 WINDOW_WIDTH = 1280;
 const u32 WINDOW_HEIGHT = 720;
 
@@ -36,6 +38,24 @@ std::vector<Vertex> quad{
 
 std::vector<u32> indices{0, 1, 2, 2, 3, 0};
 u32 indexCount = indices.size();
+
+struct Transforms {
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 proj;
+};
+
+f32 g_aspectRatio = static_cast<f32>(WINDOW_WIDTH) / static_cast<f32>(WINDOW_HEIGHT);
+f32 g_orthoScale = 10.0f;
+f32 g_viewportW = g_orthoScale * g_aspectRatio;
+f32 g_viewportH = g_orthoScale;
+f32 g_viewportWH = g_viewportW * 0.5f;
+f32 g_viewportHH = g_viewportH * 0.5f;
+
+glm::mat4 projMatrix =
+    glm::orthoLH_ZO(-g_viewportWH, g_viewportWH, -g_viewportHH, g_viewportHH, 0.1f, 10.0f);
+
+glm::mat4 viewMatrix = glm::mat4(1.0f);
 
 int main(int argc, char** argv) {
     // --------------------------------------------------------------------------------- logger init
@@ -116,7 +136,7 @@ int main(int argc, char** argv) {
         .num_samplers = 0,
         .num_storage_textures = 0,
         .num_storage_buffers = 0,
-        .num_uniform_buffers = 0
+        .num_uniform_buffers = 1
     };
     SDL_GPUShader* vertexShader = SDL_CreateGPUShader(gpuDevice, &vertexShaderInfo);
     if(!vertexShader) {
@@ -201,7 +221,8 @@ int main(int argc, char** argv) {
         .fragment_shader = fragmentShader,
         .vertex_input_state = vertexInputState,
         .primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
-        .target_info = pipelineTargetInfo
+        .rasterizer_state = SDL_GPURasterizerState{.enable_depth_clip = true},
+        .target_info = pipelineTargetInfo,
     };
 
     SDL_GPUGraphicsPipeline* graphicsPipeline =
@@ -380,22 +401,17 @@ int main(int argc, char** argv) {
     // ---------------------------------------------------------------------------------- scene init
     SceneTree tree;
 
-    NodeHandle playerHandle;
-    // this is a separate scene setup as if were loading a scene from file
-    {
-        auto world = std::make_shared<Node>("Scene1");
-        auto player = std::make_shared<Node3D>("Player");
-        auto sword = std::make_shared<Node3D>("Sword");
-        auto shield = std::make_shared<Node3D>("Shield");
-        world->addChild(player);
-        player->addChild(sword);
-        player->addChild(shield);
-        player->setScriptPath("scripts/player.lua");
-        player->load();
+    auto world = std::make_shared<Node>("Scene1");
+    auto player = std::make_shared<Node3D>("Player");
+    auto sword = std::make_shared<Node3D>("Sword");
+    auto shield = std::make_shared<Node3D>("Shield");
+    world->addChild(player);
+    player->addChild(sword);
+    player->addChild(shield);
+    player->setScriptPath("scripts/player.lua");
+    player->load();
 
-        tree.setSceneRoot(world);
-        playerHandle = player;
-    }
+    tree.setSceneRoot(world);
 
     // ---------------------------------------------------------------------------------------- loop
     while(running) {
@@ -424,8 +440,7 @@ int main(int argc, char** argv) {
         }
 
         if(swapchainTexture) {
-            SDL_GPUColorTargetInfo colorTargetInfo = {};
-            colorTargetInfo = {
+            SDL_GPUColorTargetInfo colorTargetInfo = {
                 .texture = swapchainTexture,
                 .clear_color = {0.10f, 0.10f, 0.10f, 1.0f},
                 .load_op = SDL_GPU_LOADOP_CLEAR,
@@ -435,6 +450,11 @@ int main(int argc, char** argv) {
             SDL_GPURenderPass* renderPass =
                 SDL_BeginGPURenderPass(commandBuffer, &colorTargetInfo, 1, nullptr);
             SDL_BindGPUGraphicsPipeline(renderPass, graphicsPipeline);
+
+            // transforms uniform push
+            auto t = player->transform();
+            Transforms transforms = {.model = t.toMatrix(), .view = viewMatrix, .proj = projMatrix};
+            SDL_PushGPUVertexUniformData(commandBuffer, 0, &transforms, sizeof(transforms));
 
             SDL_GPUBufferBinding vertexBufferBindings[] = {{.buffer = vertexBuffer, .offset = 0}};
             SDL_GPUBufferBinding indexBufferBindings[] = {{.buffer = indexBuffer, .offset = 0}};
