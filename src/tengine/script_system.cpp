@@ -33,7 +33,9 @@ bool ScriptSystem::init() {
 
     // enable print, assert, require
     state_.open_libraries(sol::lib::base, sol::lib::package);
-    auto result = state_.safe_script("package.path = package.path .. \";assets/scripts/?.lua\"");
+    auto result = state_.safe_script(
+        "package.path = package.path .. \";assets/scripts/?.lua;assets/tengine/scripts/?.lua\""
+    );
     auto validation = validateExecutionInternal(result);
     if(!validation) {
         LOG_ERROR("ScriptSystem", "{}", validation.error);

@@ -10,6 +10,7 @@
 #include <stb/stb_image.h>
 
 #include <tengine/asset_manager.hpp>
+#include <tengine/event_processor.hpp>
 #include <tengine/ns/node_3D.hpp>
 #include <tengine/ns/scene_tree.hpp>
 #include <tengine/script_system.hpp>
@@ -72,6 +73,12 @@ int main(int argc, char** argv) {
     if(!SDL_Init(SDL_INIT_VIDEO)) {
         LOG_FATAL("Core", "{}", SDL_GetError());
     }
+
+    auto eventProc = EventProcessor::get();
+    eventProc->map(SDL_SCANCODE_W, "move_up");
+    eventProc->map(SDL_SCANCODE_S, "move_down");
+    eventProc->map(SDL_SCANCODE_A, "move_left");
+    eventProc->map(SDL_SCANCODE_D, "move_right");
 
     SDL_Window* window =
         SDL_CreateWindow("playground", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_BORDERLESS);
